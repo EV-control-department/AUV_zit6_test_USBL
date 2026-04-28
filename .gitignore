@@ -1,0 +1,24 @@
+# 编译输出
+build/
+bin/
+obj/
+
+# 静态库和临时文件
+*.elf
+*.bin
+*.hex
+*.map
+*.o
+*.obj
+*.su
+
+# IDE 配置
+.vscode/
+.settings/
+.project
+.cproject
+.mxproject
+
+# 备份文件
+*~
+*.bak
