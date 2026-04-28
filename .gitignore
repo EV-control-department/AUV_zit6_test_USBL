@@ -12,8 +12,6 @@ obj/
 *.obj
 *.su
 
-# IDE 配置
-.vscode/
 .settings/
 .project
 .cproject

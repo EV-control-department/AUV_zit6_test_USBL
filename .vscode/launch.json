@@ -1,0 +1,29 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Cortex Debug (OpenOCD)",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/build/AUV_zit6.elf",
+            "request": "launch",
+            "type": "cortex-debug",
+            "runToEntryPoint": "main",
+            "servertype": "openocd",
+            "gdbPath": "/usr/bin/gdb-multiarch",
+            "device": "STM32H743ZIT6",
+            "configFiles": [
+                "interface/stlink.cfg",
+                "target/stm32h7x.cfg"
+            ],
+            "postLaunchCommands": [
+                "set $sp = *(unsigned int*)0x08000000",
+                "set $pc = *(unsigned int*)0x08000004"
+            ],
+            "postRestartCommands": [
+                "set $sp = *(unsigned int*)0x08000000",
+                "set $pc = *(unsigned int*)0x08000004"
+            ],
+            "preLaunchTask": "Build Firmware"
+        }
+    ]
+}
