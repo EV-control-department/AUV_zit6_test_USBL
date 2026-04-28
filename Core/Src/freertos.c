@@ -61,7 +61,7 @@ std_msgs__msg__Int32 msg;
 osThreadId_t micro_ros_taskHandle;
 const osThreadAttr_t micro_ros_task_attributes = {
   .name = "micro_ros_task",
-  .stack_size = 3000 * 4,
+  .stack_size = 5000 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for hardware_bridge */
