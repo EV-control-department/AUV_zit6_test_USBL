@@ -20,17 +20,29 @@ public:
     }
 
     /**
-     * @brief 解析并更新导航状态
+     * @brief 解析并更新导航状态 (包含硬件模拟逻辑)
      */
     bool update(NavState& state) {
         uint8_t temp_buf[256];
         uint16_t len = rx_port_.read(temp_buf, 256);
 
-        for (uint16_t i = 0; i < len; i++) {
-            if (parseByte(temp_buf[i])) {
-                decodePacket(state);
-                return true;
+        if (len > 0) {
+            for (uint16_t i = 0; i < len; i++) {
+                if (parseByte(temp_buf[i])) {
+                    decodePacket(state);
+                    return true;
+                }
             }
+        } else {
+            // --- 硬件模拟模式 ---
+            static float sim_time = 0;
+            sim_time += 0.02f; // 50Hz
+            state.x = 1.0f * sinf(sim_time * 0.5f);
+            state.y = 1.0f * cosf(sim_time * 0.5f);
+            state.z = -0.5f + 0.1f * sinf(sim_time * 2.0f); // 模拟深度波动
+            state.yaw = 30.0f * sinf(sim_time * 0.2f);     // 模拟航向摆动
+            state.timestamp = HAL_GetTick();
+            return true; 
         }
         return false;
     }

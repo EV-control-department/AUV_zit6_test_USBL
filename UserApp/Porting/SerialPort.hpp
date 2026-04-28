@@ -15,14 +15,12 @@ public:
         DUPLEX
     };
 
-    SerialPort(UART_HandleTypeDef* huart, uint16_t rx_buf_size = 512)
-        : huart_(huart), rx_buf_size_(rx_buf_size) {
-        rx_buffer_ = new uint8_t[rx_buf_size_];
-    }
+    static constexpr uint16_t kMaxRxBufferSize = 512;
 
-    ~SerialPort() {
-        delete[] rx_buffer_;
-    }
+    SerialPort(UART_HandleTypeDef* huart, uint16_t rx_buf_size = kMaxRxBufferSize)
+        : huart_(huart), rx_buf_size_(rx_buf_size > kMaxRxBufferSize ? kMaxRxBufferSize : rx_buf_size) {}
+
+    ~SerialPort() = default;
 
     /**
      * @brief 启动 DMA 循环接收
@@ -71,7 +69,7 @@ public:
 
 private:
     UART_HandleTypeDef* huart_;
-    uint8_t* rx_buffer_;
+    uint8_t rx_buffer_[kMaxRxBufferSize] = {0};
     uint16_t rx_buf_size_;
     uint16_t last_rx_pos_ = 0;
 };
