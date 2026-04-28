@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef RMW_UXRCE_TRANSPORT_CUSTOM
 
@@ -39,7 +40,6 @@ size_t cubemx_transport_write(struct uxrCustomTransport* transport, uint8_t * bu
 
     if (len > UART_DMA_BUFFER_SIZE) len = UART_DMA_BUFFER_SIZE;
     memcpy(tx_bounce_buffer, buf, len);
-    SCB_CleanDCache_by_Addr((uint32_t*)tx_bounce_buffer, len);
     __DSB();
 
     HAL_StatusTypeDef ret;
@@ -64,10 +64,6 @@ size_t cubemx_transport_read(struct uxrCustomTransport* transport, uint8_t* buf,
         __disable_irq();
         dma_tail = (UART_DMA_BUFFER_SIZE - __HAL_DMA_GET_COUNTER(uart->hdmarx)) % UART_DMA_BUFFER_SIZE;
         __enable_irq();
-        
-        if (dma_head != dma_tail) {
-            SCB_InvalidateDCache_by_Addr((uint32_t*)dma_buffer, UART_DMA_BUFFER_SIZE);
-        }
 
         ms_used++;
         osDelay(1);
