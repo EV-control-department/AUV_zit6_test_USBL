@@ -28,8 +28,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 project(${CMAKE_PROJECT_NAME})
 message("Build type: " ${CMAKE_BUILD_TYPE})
 
-# Enable CMake support for ASM and C languages
-enable_language(C ASM)
+# Enable CMake support for ASM, C and C++ languages
+enable_language(C ASM CXX)
 
 # Create an executable object type
 add_executable(${CMAKE_PROJECT_NAME})
@@ -48,6 +48,16 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     micro_ros_stm32cubemx_utils/extra_sources/custom_memory_manager.c
     micro_ros_stm32cubemx_utils/extra_sources/microros_allocators.c
     micro_ros_stm32cubemx_utils/extra_sources/microros_time.c
+  Core/Src/main.c
+  Core/Src/gpio.c
+  Core/Src/i2c.c
+  Core/Src/dma.c
+  Core/Src/freertos.c
+  Core/Src/usart.c
+  Core/Src/stm32h7xx_it.c
+  Core/Src/stm32h7xx_hal_msp.c
+  Core/Src/stm32h7xx_hal_timebase_tim.c
+  UserApp/Application/AppMain.cpp
     micro_ros_stm32cubemx_utils/extra_sources/microros_transports/dma_transport.c
 )
 
@@ -55,6 +65,11 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
     micro_ros_stm32cubemx_utils/microros_static_library_ide/libmicroros/include
+    UserApp/Common
+    UserApp/Peripherals
+    UserApp/Chassis
+    UserApp/Application
+    UserApp/Porting
 )
 
 # Add project symbols (macros)
