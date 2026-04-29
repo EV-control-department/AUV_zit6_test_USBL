@@ -21,6 +21,7 @@
  */
 
 /* Includes */
+#include "main.h"
 #include <sys/stat.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -29,6 +30,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include <sys/times.h>
+#include <unistd.h>
 
 
 /* Variables */
@@ -123,6 +125,32 @@ int _open(char *path, int flags, ...)
   (void)flags;
   /* Pretend like we always fail */
   return -1;
+}
+
+int _gettimeofday(struct timeval *tv, void *tz)
+{
+  (void)tz;
+
+  if (tv != NULL)
+  {
+    uint32_t tick = HAL_GetTick();
+    tv->tv_sec = tick / 1000U;
+    tv->tv_usec = (tick % 1000U) * 1000U;
+  }
+
+  return 0;
+}
+
+int usleep(useconds_t usec)
+{
+  uint32_t start = HAL_GetTick();
+  uint32_t delay_ms = (usec + 999U) / 1000U;
+
+  while ((HAL_GetTick() - start) < delay_ms)
+  {
+  }
+
+  return 0;
 }
 
 int _wait(int *status)

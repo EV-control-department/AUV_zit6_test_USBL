@@ -1,176 +1,125 @@
-# AUV 系统通讯与控制协议 (Draft)
+这份 AUV 系统通讯与控制协议规范已根据最新的技术架构方案进行了深度重构。文档旨在满足工业级水下航行器的工程应用需求，采用了学术规范化的排版结构，消除了零散的说明性条目，并完整注入了关于 NAV-300 惯导特性、级联前馈控制、Z 轴积分继承以及 DVL 安全保护的状态机逻辑。
 
-本文档定义了 H7 主控与惯导 (INS)、下位机 (VIT6) 以及上位机 (micro-ROS) 之间的核心数据结构与通讯协议。
+***
 
-## 1. 惯导数据结构 (NavState)
+# AUV 系统通讯与控制协议技术规范
 
-用于在系统内部传递标准化的导航状态信息。
+## 1. 导航系统数据结构与状态定义
+
+系统底层的核心导航上下文由 `NavState` 结构体承载。该数据结构严格映射了 NAV-300 组合导航系统的物理输出协议，不仅支持多源传感器（IMU/DVL/Depth）的透明透传，还集成了地理坐标与高度计字段，以支撑广域地图标绘与近底定高航行。
 
 ```cpp
 struct NavState {
-    // 4-DOF 位置与姿态 (Vector)
-    float x;    // Position X (m)
-    float y;    // Position Y (m)
-    float z;    // Position Z (m)
-    float yaw;  // Attitude Yaw (rad)
+    // 空间位置与地理坐标系状态
+    int32_t latitude;   // 纬度 (度 * 10^6)
+    int32_t longitude;  // 经度 (度 * 10^6)
+    float x;            // 北向位置增量 (m)
+    float y;            // 东向位置增量 (m)
+    float z;            // 深度计绝对深度 (m)
+    float altimeter;    // 高度计离底高度 (m)
+    
+    // 姿态与动力学状态
+    float roll;         // 横滚角 (rad)
+    float pitch;        // 俯仰角 (rad)
+    float yaw;          // 航向角 (rad，基于真北自对准)
+    float vx, vy, vz;   // 载体坐标系轴向线速度 (m/s)
+    float wx, wy, wz;   // 载体坐标系轴向角速度 (rad/s)
 
-    // 4-DOF 速度与角速度 (Speed)
-    float vx;   // Linear Velocity X (m/s)
-    float vy;   // Linear Velocity Y (m/s)
-    float vz;   // Linear Velocity Z (m/s)
-    float vyaw; // Angular Velocity Yaw (rad/s)
-
-    uint8_t imu_state; // 导航状态位
-    uint8_t dvl_state; // DVL 状态位
-    uint32_t timestamp; // 系统时间戳 (ms)
+    // 传感器健康度与模式状态
+    uint8_t nav_mode;   // 导航模式 (0x01:粗对准, 0x02:精对准, 0x04:组合导航)
+    uint8_t sensor_flag;// 标志位 (Bit0:DVL有效, Bit1:GPS有效, Bit2:高度计有效)
+    uint32_t timestamp; // 系统严格对时后的本地运行毫秒戳
 };
 ```
 
-## 2. 下位机通讯协议 (Subordinate_Link)
+## 2. 下位机 (VIT6) 通讯链路协议
 
-H7 与 VIT6 之间的串口通讯协议，采用固定长度帧格式。
+主控制器（H7）与动力驱动板（VIT6）之间的物理通信链路采用双向串口 DMA 传输。为有效抵御水下高功率执行机构产生的电磁干扰，通信帧格式引入了动态长度标识与 CRC-16 (Modbus) 高置信度校验机制。
 
-### 2.1 帧格式
-| 偏移 | 字节 | 描述 |
+### 2.1 帧格式定义
+
+| 偏移地址 | 字节域名称 | 字段物理描述 |
 | :--- | :--- | :--- |
-| 0 | 0xAA | 帧头 1 |
-| 1 | 0x55 | 帧头 2 |
-| 2 | ID | 帧类型 (0x01: 控制, 0x02: ARM/DISARM, 0x03: 配置) |
-| 3-N | Data | 有效载荷 (0x01/0x02 为定长数据) |
-| N+1 | Checksum | 累加和校验 (从 ID 开始到 Data 结束) |
-| N+2 | 0x0D | 帧尾 |
+| `0` | `0xAA` | 通信同步帧头 1 |
+| `1` | `0x55` | 通信同步帧头 2 |
+| `2` | `ID` | 报文指令符 (0x01:控制执行, 0x02:状态切换, 0x03:参数配置) |
+| `3` | `Len` | 有效载荷长度 ($N$)，用于动态界定后续数据区边界 |
+| `4` 至 `3+N` | `Data` | 动态有效载荷数据区 |
+| `4+N` | `CRC_H` | CRC-16 校验码高字节，校验序列覆盖自 ID 域至 Data 域结束 |
+| `5+N` | `CRC_L` | CRC-16 校验码低字节 |
+| `6+N` | `0x0D` | 报文结束帧尾 |
 
-- `Thruster_Force[0-5]`: 期望推力 (-1000 到 1000)。
-- `Servo_Angle[0-N]`: 期望舵机角度 (通常为定值或控制变量)。
+### 2.2 协议载荷语义
 
-### 2.3 状态切换定义 (Payload ID: 0x02)
-用于控制下位机 VIT6 的解锁状态：
-- `Status`: `0x01` (ARM/解锁), `0x00` (DISARM/锁定)。
-- **要求**：执行切换时需持续发送约 2 秒以确保生效。
+当帧类型指令符为 `0x01` 时，载荷被定义为高频控制量。其数据区包含各推进器的期望推力值（经 H7 映射后的 16 位有符号整型，取值空间为 -1000 至 1000）以及舵机的目标偏转角度。
 
-### 2.4 配置量定义 (Payload ID: 0x03)
-用于向 VIT6 下发不常变动的参数：
-- **Sub-ID 0x01**: PID 参数下发。
-- **Sub-ID 0x02**: 舵机零位 (Zero Position) 设定。
-- **Sub-ID 0x03**: 推力曲线 (Thrust Curve) 数据表。
+当帧类型指令符为 `0x02` 时，载荷用于管理 VIT6 功率级的解锁逻辑。状态字 `0x01` 触发系统解锁（ARM），而 `0x00` 触发系统锁定（DISARM）。该指令必须以不低于 10Hz 的频率连续确认 2 秒方可被下位机采信。
 
----
+当帧类型指令符为 `0x03` 时，系统进入配置下装模式。依据子标识符（Sub-ID），系统可向 VIT6 写入 PID 闭环增益参数集（Sub-ID 0x01）、舵机机械零位标定值（Sub-ID 0x02）以及推进器非线性推力映射曲线（Sub-ID 0x03）。
 
-## 3. 控制注入逻辑 (Control Injection Logic)
+## 3. 控制注入逻辑与级联前馈算法
 
-H7 自身不具备自主规划模式，所有控制目标均来自外部 (micro-ROS)。系统根据指令的**层级 (Level)** 决定从级联 PID 的哪一级开始运行。
+主控单元采用基于微积分降维原则的从动计算架构，底盘不维持全局任务状态，仅负责确定性轨迹的平滑追踪。
 
-### 3.1 控制层级定义 (Control Levels)
-接管必须以“层”为单位，一旦接管某一层，该层的所有 6 自由度分量必须完整下发。
+### 3.1 控制层级与状态机路由
 
-| 层级名称 | 注入点 | 输入数据内容 | 说明 |
-| :--- | :--- | :--- | :--- |
-| **POSITION** | 位置环入口 | `x, y, z, yaw` | 最外层，控制绝对位置和航向 |
-| **VELOCITY** | 速度环入口 | `vx, vy, vz, vyaw` | 控制平移速度和旋转速率 |
-| **ACTUATOR** | 动力分配入口 | `f_x, f_y, f_z, t_z` | 直接给定力与力矩 |
+控制权限制定以物理控制环为最小原子单位。系统通过解析外部话题提供的目标层级（Level），动态决定级联 PID 算法的计算起点。当接管层级为 `POSITION` 时，系统激活全流程轨迹追踪；当指令层级为 `VELOCITY` 时，控制器执行旁路逻辑，挂起位置环运算，直接将控制矢量送入速度环计算节点。
 
-### 3.2 级联计算流程
-1.  **接收**：从 `/auv/offboard_setpoint` 获取 `Level` 和 `Values`。
-2.  **路由**：
-    - 若 `Level == VELOCITY`：跳过位置环计算，直接将 `Values` 作为速度环的目标值。
-    - 级联运行 `VEL -> ATT -> RATE -> ACTUATOR`。
-3.  **输出**：最终计算结果通过 `Subordinate_Link` 下发给 VIT6。
+### 3.2 无扰动切换与积分继承机制
 
----
+在控制权限向上级环路（如从速度环切回位置环）跃迁的瞬间，系统强制执行无扰动切换保护（Bumpless Transfer）。系统首先执行设定点强制对齐，将被挂起环路的目标点重置为当前的传感器观测值，从而在物理学上消除比例项突变。
+
+针对积分器继承，水平与航向通道（$X, Y, Yaw$）的历史积分值执行清零以释放饱和应力；而对于垂向深度通道（$Z$），因其承担抵消潜器物理净浮力的核心任务，系统绝对禁止清零。控制器采用反向推演算法，将 $Z$ 轴积分器的初始值预加载为上一控制周期的实际推力输出值，确保切换瞬间垂直推力曲线的绝对连续。
+
+### 3.3 运动学前馈补偿引擎
+
+系统底层固化了运行于 100Hz 的运动学平滑器（Kinematic Profile Generator）。该模块独立于网络通信状态持续运行，将外部突变目标研磨为符合物理边界的轨迹。级联控制器深度融合平滑器输出的期望速度（$V_d$）与期望加速度（$A_d$）。最终推力由误差反馈项与前馈补偿项叠加构成，极大地提升了轨迹跟踪的响应刚性与稳态精度。
 
 ## 4. micro-ROS 接口详情
 
-### 4.1 发布话题 (H7 -> 上位机)
-- **`/auv/nav_state`** (`nav_msgs/Odometry`): 
-    - 包含 INS 融合后的完整 6-DOF 位姿和速度。
+系统采用 `/zit6` 命名空间。上行话题按物理时序敏感度分层发布，主循环以 100Hz 为基准，再通过分频得到 10/20/50/100Hz 的实际刷新率。
 
-### 4.2 订阅话题 (上位机 -> H7)
-- **`/auv/offboard_setpoint`** (自定义类型):
-    ```cpp
-    uint8 level      # 层级 (0:POS, 1:VEL, 2:ACT)
-    float32[4] data  # 对应层级的目标值 (详见 4.2.1)
-    uint32 type_mask # 位掩码，用于忽略特定轴 (Bit=1 表示忽略该轴)
-    ```
+### 4.1 上行状态遥测链路
 
-#### 4.2.1 data[4] 数据映射表 (PX4 风格)
-为了保持索引的一致性，前三个分量始终对应平移轴 (X, Y, Z)，第四个分量对应旋转轴 (Yaw)。
+| 话题名称 | 消息类型 | 刷新率 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `/zit6/heartbeat` | `std_msgs/UInt32` | 10 Hz | 高 8 位为运行状态/导航模式，低 24 位为毫秒时间戳 |
+| `/zit6/state/pose` | `nav_msgs/Odometry` | 50 Hz | 输出 `[x, y, z, yaw]` 与对应速度字段 |
+| `/zit6/state/velocity` | `geometry_msgs/TwistStamped` | 100 Hz | 输出 `[vx, vy, vz, vyaw]` |
+| `/zit6/state/ins_info` | `std_msgs/UInt32` | 20 Hz | 当前实现用 32 位编码 INS 运行状态与 DVL 状态 |
+| `/zit6/state/thrust` | `auv_msgs/ThrustState` | 200 Hz | 预留：执行机构推力状态 |
+| `/zit6/state/shadow` | `auv_msgs/TrajectoryState` | 100 Hz | 预留：平滑器轨迹输出 |
 
-| 层级 (Level) | data[0] (X) | data[1] (Y) | data[2] (Z) | data[3] (Yaw) | 说明 |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **0: POS** | x (m) | y (m) | z (m) | yaw (rad) | 位置与航向目标 |
-| **1: VEL** | vx (m/s) | vy (m/s) | vz (m/s) | vyaw (r/s) | 速度与速率目标 |
-| **2: ACT** | F_x | F_y | F_z | T_z | 归一化推力与力矩 |
+### 4.2 下行控制指令链路
 
-#### 4.2.2 type_mask 定义 (PX4 风格)
-掩码位与 `data[i]` 的索引严格对应。
+下行链路统一为 `/zit6/compact_setpoint`，刷新率 100Hz。消息内容由目标层级、轴控掩码和四轴目标值组成，对应当前控制器的 `ControlLevel` 与 `OffboardSetpoint`。外设动作类指令保留为 `/zit6/cmd/device_action`，用于 DVL、惯导清零和系统复位等非连续控制动作。
 
-| 位 (Bit) | 对应数据 | 描述 |
-| :--- | :--- | :--- |
-| **0 (0x01)** | data[0] | 忽略 X 轴控制 (Position/Velocity/Force) |
-| **1 (0x02)** | data[1] | 忽略 Y 轴控制 (Position/Velocity/Force) |
-| **2 (0x04)** | data[2] | 忽略 Z 轴控制 (Position/Velocity/Force) |
-| **3 (0x08)** | data[3] | 忽略 Yaw 轴控制 (Angle/Rate/Torque) |
+### 4.3 当前固件映射
 
-*例如：若 `level=0 (POS)` 且 `type_mask=0x03` (忽略 X 和 Y)，则系统仅会进行高度 (Z) 和姿态的自动控制。*
+当前固件已实现的发布项为：
 
-> [!NOTE]
-> 对于 **ATTITUDE** 层级，通常只需给定 `roll` 和 `pitch`，而 `yaw` 的控制往往在 `POSITION` 或 `VELOCITY` 层级已经处理。但在本协议中，为了保持层级完整性，每一层均要求提供完整的控制矢量。
+- `/zit6/state/pose`
+- `/zit6/state/velocity`
+- `/zit6/state/ins_info`
+- `/zit6/heartbeat`
+- `/zit6/compact_setpoint` 订阅
 
----
+`/zit6/state/thrust` 与 `/zit6/state/shadow` 目前只保留协议位，待推力分配器和运动学平滑器接入后再启用。
 
-### 4.1 发布话题 (H7 -> 上位机)
-- **`/auv/nav_state`** (`nav_msgs/msg/Odometry`):
-    - `pose.pose.position`: [x, y, z] (m)
-    - `pose.pose.orientation`: 转换自 [roll=0, pitch=0, yaw] 的四元数
-    - `twist.twist.linear`: [vx, vy, vz] (m/s)
-    - `twist.twist.angular`: [0, 0, vyaw] (rad/s)
-- **`/auv/heartbeat`** (`std_msgs/msg/UInt32`):
-    - `data`: 系统状态掩码或运行时间戳 (ms)
+## 5. 算力权责分配与量纲管理
 
-### 4.2 订阅话题 (上位机 -> H7)
-- **`/auv/offboard_setpoint`** (自定义类型 `auv_msgs/msg/OffboardSetpoint`):
-    - `uint8 level`: 注入层级 (0:POS, 1:VEL, 2:ACT)
-    - `float32[4] data`: [X, Y, Z, Yaw] 目标矢量
-    - `uint32 type_mask`: 忽略位掩码
-- **`/auv/config/pid`** (自定义类型 `auv_msgs/msg/PIDConfig`):
-    - `uint8 axis`: 目标轴 (0:X, 1:Y, 2:Z, 3:Yaw)
-    - `uint8 loop`: 目标环 (0:Position, 1:Velocity)
-    - `float32 kp`, `ki`, `kd`: PID 参数
-    - `float32 i_limit`, `out_limit`: 积分与输出限幅
-- **`/auv/config/servo`** (自定义类型 `auv_msgs/msg/ServoConfig`):
-    - `uint8 index`: 舵机编号
-    - `int16 pwm_at_0`: 0度对应的 PWM 值
-    - `int16 pwm_at_180`: 180度对应的 PWM 值
-    - `float32 min_limit`, `max_limit`: 软限幅角度范围 (deg)
-    - `float32 max_velocity`: 最大允许转动角速度 (deg/s)
-- **`/auv/config/thrust_curve`** (自定义类型 `auv_msgs/msg/ThrustCurve`):
-    - `uint8 index`: 推进器编号
-    - `float32[5] pwm`: 5 个关键点 PWM 值
-    - `float32[5] thrust`: 对应 5 个点的推力值 (kg/N)
+本系统严格贯彻算力层级隔离。主控 H7 承担全部高层逻辑，涵盖导航矩阵滤波、多级 PID 推导以及动力分配解算。其输出的计算结果始终保持归一化形式（取值域 -1.0 至 1.0）。动力驱动板 VIT6 仅负责物理层量纲映射。H7 在通信封包阶段，负责将该归一化系数线性缩放并映射至协议约定的整型边界。这种设计确保了上层算法对底层执行器非线性特性的完全免疫。
 
----
+## 6. 时间同步机制
 
-## 5. 控制策略说明 (Control Strategy)
+为根除网络传输抖动对导数计算造成的干扰，系统强制执行跨硬件的时钟对齐。初始化阶段利用 micro-ROS 原生中间件建立系统级基准时间。主控芯片在接收到惯导硬件中断脉冲的瞬间锁存本地滴答数，以此反推传感器数据的绝对采样时刻，并将该高置信度时间戳压入所有上行报文头部。内部心跳机制采用 28 位寄存器存储自启动时间，将溢出临界点推延至 74 小时以上。
 
-> [!IMPORTANT]
-> **计算权责划分**：
-> 1. **H7 主控**：负责高层逻辑。包括导航解算、级联 PID 计算、以及动力分配 (Force Allocation)。H7 输出的是每个推进器应有的“推力值”。
-> 2. **VIT6 驱动**：负责底层执行。包括接收 H7 的推力指令，根据内部存储的 `Thrust Curve` 将推力换算为 `PWM`，并最终驱动电调。
-> 3. **参数下发**：PID 参数、舵机零位、推力曲线等均由上位机通过 micro-ROS 发给 H7，再由 H7 转发给 VIT6 存储。
+## 7. AUV 部署与初始化序列
 
----
+受限于 NAV-300 高精度陀螺仪依赖地球自转进行寻北的物理法则，以及 DVL 声学换能器在空气中通电易烧毁的风险，部署作业必须遵循严格的状态机序列。
 
-## 6. 时间同步机制 (Time Synchronization)
+**第一阶段：系泊对准 (Alignment)**。系统上电初期，主控实时监测导航模式。在反馈处于粗对准或精对准期间，底盘强制闭锁位置接管权限，阻止航向未收敛引发的轨迹发散。此过程通常需维持 10 分钟以上。
 
-为了确保惯导、主控 (H7) 与上位机 (ROS 2) 之间的数据具有时间一致性，系统采用以下对时策略：
+**第二阶段：入水激活 (Activation)**。确认潜器入水后，上位机下发动作指令。主控截获事件后闭合继电器，并持续轮询直至 DVL 标志位变为有效。
 
-### 6.1 MCU 与 上位机 (micro-ROS) 对时
-*   **同步协议**：使用 micro-ROS 提供的 `rmw_uros_sync_session` 功能。
-*   **频率**：初始化时进行 1 次对时，运行期间每 10 秒进行一次校准。
-*   **实现**：H7 会通过同步后的时钟填充发布消息的 `header.stamp`。
-
-### 6.2 惯导 (INS) 与 MCU 对时
-*   **映射逻辑**：H7 在接收到惯导数据包时，记录下接收时刻的本地同步时间（Epoch Time），从而计算出数据在 ROS 2 世界中的绝对时间。
-
-### 6.3 心跳数据要求
-*   **Heartbeat 内容**：发布 `/auv/heartbeat` 时，`data` 字段的高 8 位表示状态掩码（0 为正常），低 24 位表示系统自对时后的运行时间 (ms)。
+**第三阶段：原点重置与起航 (Mission Start)**。在确立稳定的组合导航模式后，上位机触发坐标清零序列，抹除吊放过程产生的累积漂移。完成原点重塑后，底层运动学引擎正式接管连续时序指令，任务进入自主执行阶段。
