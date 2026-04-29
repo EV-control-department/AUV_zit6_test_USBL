@@ -14,10 +14,24 @@ public:
 
     void init() {
         rx_port_.startReceive();
-        // UART3 发送惯导初始化命令（室内导航模式）
-        uint8_t init_cmd[14] = {0xFC, 0xCF, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x31, 0xFD, 0xDF};
-        HAL_UART_Transmit(tx_uart_, init_cmd, 14, 20);
+        // 初始化：位置增量清零
+        resetPosition();
     }
+
+    /**
+     * @brief 发送控制指令给惯导
+     * @param cmd_id 指令ID (02:位置清零, 03:DVL电源, 04:重启)
+     * @param value 指令值 (如DVL开启为01, 关闭为00)
+     */
+    void sendCommand(uint8_t cmd_id, uint8_t value) {
+        uint8_t cmd[14] = {0xFC, 0xCF, cmd_id, value, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFD, 0xDF};
+        cmd[11] = checkData(cmd, 11);
+        HAL_UART_Transmit(tx_uart_, cmd, 14, 20);
+    }
+
+    void resetPosition() { sendCommand(0x02, 0x00); }
+    void setDvlPower(bool on) { sendCommand(0x03, on ? 0x01 : 0x00); }
+    void restart() { sendCommand(0x04, 0x00); }
 
     bool update(NavState& state) {
         uint8_t temp_buf[256];

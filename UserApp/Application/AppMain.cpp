@@ -16,6 +16,7 @@
 #include <geometry_msgs/msg/twist_stamped.h>
 #include <std_msgs/msg/float32_multi_array.h>
 #include <std_msgs/msg/u_int32.h>
+#include <std_msgs/msg/u_int8.h>
 
 namespace {
 
@@ -44,6 +45,30 @@ static void onCompactSetpoint(const void *msgin) {
 
 } // namespace
 
+// 引用硬件句柄
+extern "C" UART_HandleTypeDef huart7;
+extern "C" UART_HandleTypeDef huart3;
+
+// 静态实例化驱动，必须在回调函数之前定义或声明
+static auv::INS_Driver ins_driver(&huart7, &huart3);
+static auv::NavState current_nav_state;
+
+namespace {
+static void onInsCommand(const void *msgin) {
+    const auto *message = static_cast<const std_msgs__msg__UInt8 *>(msgin);
+    if (message == nullptr) return;
+
+    switch (message->data) {
+        case 1: ins_driver.setDvlPower(true); break;
+        case 2: ins_driver.setDvlPower(false); break;
+        case 3: ins_driver.restart(); break;
+        case 4: ins_driver.resetPosition(); break;
+        default: break;
+    }
+}
+
+} // namespace
+
 // 引用 freertos.c 中的传输接口
 extern "C" bool cubemx_transport_open(struct uxrCustomTransport *transport);
 extern "C" bool cubemx_transport_close(struct uxrCustomTransport *transport);
@@ -54,10 +79,6 @@ extern "C" void *microros_allocate(size_t size, void *state);
 extern "C" void microros_deallocate(void *pointer, void *state);
 extern "C" void *microros_reallocate(void *pointer, size_t size, void *state);
 extern "C" void *microros_zero_allocate(size_t number_of_elements, size_t size_of_element, void *state);
-
-// 静态实例化驱动，避免依赖 C 堆
-static auv::INS_Driver ins_driver(&huart7, &huart3);
-static auv::NavState current_nav_state;
 
 /**
  * @brief 导航与控制任务 (50Hz)
@@ -106,6 +127,7 @@ void UserApp_MicroRosTask(void *argument) {
     rclc_support_t support;
     rcl_node_t node;
     rcl_subscription_t setpoint_sub;
+    rcl_subscription_t ins_cmd_sub;
     rclc_executor_t executor;
     nav_msgs__msg__Odometry nav_state_msg;
     rcl_publisher_t nav_state_pub;
@@ -115,6 +137,7 @@ void UserApp_MicroRosTask(void *argument) {
     rcl_publisher_t ins_info_pub;
     rcl_publisher_t heartbeat_pub;
     std_msgs__msg__Float32MultiArray setpoint_msg;
+    std_msgs__msg__UInt8 ins_cmd_msg;
     std_msgs__msg__UInt32 heartbeat_msg;
 
     enum State { WAITING_AGENT, AGENT_CONNECTED };
@@ -142,6 +165,7 @@ void UserApp_MicroRosTask(void *argument) {
                     std_msgs__msg__UInt32__init(&heartbeat_msg);
                     std_msgs__msg__UInt32__init(&ins_info_msg);
                     std_msgs__msg__Float32MultiArray__init(&setpoint_msg);
+                    std_msgs__msg__UInt8__init(&ins_cmd_msg);
                     rclc_publisher_init_default(
                         &nav_state_pub, &node,
                         ROSIDL_GET_MSG_TYPE_SUPPORT(nav_msgs, msg, Odometry),
@@ -167,12 +191,24 @@ void UserApp_MicroRosTask(void *argument) {
                         ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
                         "/zit6/compact_setpoint"
                     );
-                    rclc_executor_init(&executor, &support.context, 1, &rcl_allocator);
+                    rclc_subscription_init_default(
+                        &ins_cmd_sub, &node,
+                        ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt8),
+                        "/zit6/cmd/ins_command"
+                    );
+                    rclc_executor_init(&executor, &support.context, 2, &rcl_allocator);
                     rclc_executor_add_subscription(
                         &executor,
                         &setpoint_sub,
                         &setpoint_msg,
                         &onCompactSetpoint,
+                        ON_NEW_DATA
+                    );
+                    rclc_executor_add_subscription(
+                        &executor,
+                        &ins_cmd_sub,
+                        &ins_cmd_msg,
+                        &onInsCommand,
                         ON_NEW_DATA
                     );
                     last_pose_pub_tick = now_ms;
@@ -193,6 +229,8 @@ void UserApp_MicroRosTask(void *argument) {
                         }
                         if (RCL_RET_OK != rcl_subscription_fini(&setpoint_sub, &node)) {
                         }
+                        if (RCL_RET_OK != rcl_subscription_fini(&ins_cmd_sub, &node)) {
+                        }
                         if (RCL_RET_OK != rcl_publisher_fini(&nav_state_pub, &node)) {
                         }
                         if (RCL_RET_OK != rcl_publisher_fini(&velocity_pub, &node)) {
@@ -208,6 +246,7 @@ void UserApp_MicroRosTask(void *argument) {
                         nav_msgs__msg__Odometry__fini(&nav_state_msg);
                         geometry_msgs__msg__TwistStamped__fini(&velocity_msg);
                         std_msgs__msg__Float32MultiArray__fini(&setpoint_msg);
+                        std_msgs__msg__UInt8__fini(&ins_cmd_msg);
                         std_msgs__msg__UInt32__fini(&heartbeat_msg);
                         std_msgs__msg__UInt32__fini(&ins_info_msg);
                         break;
