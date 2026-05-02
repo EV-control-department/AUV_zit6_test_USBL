@@ -1,3 +1,19 @@
+/**
+ * @file INS_Driver.hpp
+ * @brief NAV-300 集成惯导驱动类
+ *
+ * 职责：
+ * 1. 通过串口（UART+DMA）接收并解析 NAV-300 的 100Hz 导航数据包。
+ * 2. 按照“室外 GPS/SINS/DVL”模式协议提取位姿、速度及传感器状态。
+ * 3. 向上层提供线程安全的 NavState 访问接口。
+ * 4. 封装控制指令（DVL电源、位置清零、系统重启）。
+ *
+ * 协议参考：
+ * - 帧头：0xFA 0xAF
+ * - 帧尾：0xFB 0xBF
+ * - 校验：异或校验 (XOR)
+ */
+
 #ifndef __INS_DRIVER_HPP
 #define __INS_DRIVER_HPP
 
@@ -7,145 +23,84 @@
 
 namespace auv {
 
+/**
+ * @class INS_Driver
+ * @brief 惯导驱动实现类
+ */
 class INS_Driver {
 public:
+    /**
+     * @brief 构造函数
+     * @param rx_uart 接收数据的 UART 句柄 (通常开启 DMA)
+     * @param tx_uart 发送指令的 UART 句柄
+     */
     INS_Driver(UART_HandleTypeDef* rx_uart, UART_HandleTypeDef* tx_uart)
         : rx_port_(rx_uart, 512), tx_uart_(tx_uart) {}
 
-    void init() {
-        rx_port_.startReceive();
-        // 初始化：位置增量清零
-        resetPosition();
-    }
+    /**
+     * @brief 初始化驱动，启动非阻塞接收
+     */
+    void init();
 
     /**
-     * @brief 发送控制指令给惯导
-     * @param cmd_id 指令ID (02:位置清零, 03:DVL电源, 04:重启)
-     * @param value 指令值 (如DVL开启为01, 关闭为00)
+     * @brief 发送控制指令给惯导硬件
+     * @param cmd_id 指令ID（0x02:位置清零, 0x03:DVL电源, 0x04:重启）
+     * @param value 指令参数
      */
-    void sendCommand(uint8_t cmd_id, uint8_t value) {
-        uint8_t cmd[14] = {0xFC, 0xCF, cmd_id, value, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFD, 0xDF};
-        cmd[11] = checkData(cmd, 11);
-        HAL_UART_Transmit(tx_uart_, cmd, 14, 20);
-    }
+    void sendCommand(uint8_t cmd_id, uint8_t value);
 
-    void resetPosition() { sendCommand(0x02, 0x00); }
-    void setDvlPower(bool on) { sendCommand(0x03, on ? 0x01 : 0x00); }
-    void restart() { sendCommand(0x04, 0x00); }
+    /**
+     * @brief 全局位置增量清零
+     */
+    void resetPosition();
 
-    bool update(NavState& state) {
-        uint8_t temp_buf[256];
-        uint16_t len = rx_port_.read(temp_buf, 256);
+    /**
+     * @brief 控制 DVL 模块电源状态
+     * @param on true 表示开启 DVL (0x01), false 表示关闭 (0x00)
+     */
+    void setDvlPower(bool on);
 
-        if (len > 0) {
-            for (uint16_t i = 0; i < len; i++) {
-                if (parseByte(temp_buf[i]) && validateFrame()) {
-                    decodePacket(state);
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
+    /**
+     * @brief 触发惯导系统重启
+     */
+    void restart();
+
+    /**
+     * @brief 驱动更新函数，建议在 100Hz+ 循环中调用
+    *
+     * 计算流程：
+     * 1. 从环形缓冲区读取原始字节。
+     * 2. 执行状态机解析（检测帧头、帧尾）。
+     * 3. 校验合格后解码数据并更新内部 state_ 副本。
+    *
+     * @param[out] state 输出解码后的导航状态
+     * @return true 表示成功解析到一个完整的新帧
+     */
+    bool update(NavState& state);
+
+    /**
+     * @brief 获取最新解析到的导航状态快照
+     */
+    NavState getNavState() const { return state_; }
 
 private:
-    SerialPort rx_port_;
-    UART_HandleTypeDef* tx_uart_;
+    SerialPort rx_port_;          ///< 串口接收驱动
+    UART_HandleTypeDef* tx_uart_; ///< 指令发送串口句柄
 
     static constexpr uint16_t kMaxFrameSize = 256;
-    static constexpr uint16_t kMinFrameSize = 132; // 需要访问到 buf[129]
-    uint8_t packet_buf_[kMaxFrameSize] = {0};
-    uint16_t frame_len_ = 0;
+    static constexpr uint16_t kMinFrameSize = 132;
+    uint8_t packet_buf_[kMaxFrameSize] = {0};      ///< 帧解析临时缓冲区
+    uint16_t frame_len_ = 0;                       ///< 当前解析长度
 
-    uint8_t checkData(const uint8_t* data, uint8_t size) {
-        uint8_t v = data[0];
-        for (uint8_t i = 1; i < size; ++i) {
-            v ^= data[i];
-        }
-        return v;
-    }
+    NavState state_{}; ///< 缓存的最新有效位姿状态
+    NavState prev_state_{}; ///< 上一帧状态，用于速度差分估计
+    bool has_prev_state_ = false;
 
-    bool parseByte(uint8_t b) {
-        // State 0: 等待 0xFA
-        if (frame_len_ == 0) {
-            if (b == 0xFA) {
-                packet_buf_[frame_len_++] = b;
-            }
-            return false;  // 还没收到完整帧
-        }
-        
-        // State 1: 等待 0xAF
-        if (frame_len_ == 1) {
-            if (b == 0xAF) {
-                packet_buf_[frame_len_++] = b;
-            } else if (b == 0xFA) {
-                // 重新对齐（发现新帧头）
-                packet_buf_[0] = 0xFA;
-                frame_len_ = 1;
-            } else {
-                // 垃圾字节，复位
-                frame_len_ = 0;
-            }
-            return false;  // 还没收到完整帧
-        }
-        
-        // State >=2: 收集后续数据字节
-        // 中途遇到新帧头，按同学工程逻辑重新对齐
-        if (packet_buf_[frame_len_ - 1] == 0xFA && b == 0xAF) {
-            packet_buf_[0] = 0xFA;
-            packet_buf_[1] = 0xAF;
-            frame_len_ = 2;
-            return false;
-        }
-        
-        if (frame_len_ >= kMaxFrameSize) {
-            frame_len_ = 0;
-            return false;
-        }
-        
-        packet_buf_[frame_len_++] = b;
-        
-        // 检查是否收到完整帧（检测 0xFB 0xBF 尾）
-        return frame_len_ >= 2 &&
-               packet_buf_[frame_len_ - 2] == 0xFB &&
-               packet_buf_[frame_len_ - 1] == 0xBF;
-    }
-
-    bool validateFrame() {
-        if (frame_len_ < kMinFrameSize) {
-            frame_len_ = 0;
-            return false;
-        }
-        if (packet_buf_[0] != 0xFA || packet_buf_[1] != 0xAF) {
-            frame_len_ = 0;
-            return false;
-        }
-        // 室外GPS/SINS/DVL模式：校验和@130
-        if (checkData(packet_buf_, 130) != packet_buf_[130]) {
-            frame_len_ = 0;
-            return false;
-        }
-        return true;
-    }
-
-    void decodePacket(NavState& state) {
-        float raw_data[12];
-        // 按照NAV-300室外GPS/SINS/DVL模式协议
-        memcpy(&(raw_data[3]), packet_buf_ + 2, 12);   // @2-13: 横滚(roll), 俯仰(pitch), 航向(yaw)
-        memcpy(&(raw_data[0]), packet_buf_ + 54, 8);   // @54-61: 北向位置(X), 东向位置(Y)
-        memcpy(&(raw_data[2]), packet_buf_ + 62, 4);   // @62-65: 深度(Z) - 改正：之前错读@46
-
-        state.y = raw_data[0];   // 北向位置
-        state.x = -raw_data[1];  // 东向位置（取反）
-        state.z = raw_data[2];   // 深度
-        state.yaw = raw_data[5]; // 航向
-
-        state.imu_state = packet_buf_[129];       // @129: 当前导航模式
-        state.dvl_state = packet_buf_[115] >> 7;  // @115 bit7: DVL有效状态位
-        state.timestamp = HAL_GetTick();
-
-        frame_len_ = 0;
-    }
+    // 内部私有方法
+    uint8_t checkData(const uint8_t* data, uint8_t size);
+    bool parseByte(uint8_t b);
+    bool validateFrame();
+    void decodePacket(NavState& state);
 };
 
 } // namespace auv

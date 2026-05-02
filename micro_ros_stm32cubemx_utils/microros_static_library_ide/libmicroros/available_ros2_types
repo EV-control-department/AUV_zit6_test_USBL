@@ -274,6 +274,9 @@ control_msgs/MotionPrimitiveSequence.msg
 control_msgs/JointComponentTolerance.msg
 control_msgs/DynamicInterfaceValues.msg
 control_msgs/PidState.msg
+control_msgs/JointCommand.msg
 control_msgs/JointTolerance.msg
 control_msgs/InterfaceValue.msg
 control_msgs/Keys.msg
+zit6_interfaces/ZitSetpoint.msg
+zit6_interfaces/ZitStatus.msg

@@ -58,6 +58,11 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
   Core/Src/stm32h7xx_hal_msp.c
   Core/Src/stm32h7xx_hal_timebase_tim.c
   UserApp/Application/AppMain.cpp
+  UserApp/Peripherals/INS_Driver.cpp
+  UserApp/Control/ChassisManager.cpp
+  UserApp/Control/PID_Controller.cpp
+  UserApp/Control/KinematicProfile.cpp
+  UserApp/Control/CoordinateManager.cpp
     micro_ros_stm32cubemx_utils/extra_sources/microros_transports/dma_transport.c
 )
 
@@ -67,7 +72,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     micro_ros_stm32cubemx_utils/microros_static_library_ide/libmicroros/include
     UserApp/Common
     UserApp/Peripherals
-    UserApp/Chassis
+    UserApp/Control
     UserApp/Application
     UserApp/Porting
 )
@@ -90,7 +95,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
 
 add_custom_target(microros_build
     COMMAND docker pull microros/micro_ros_static_library_builder:humble
-    COMMAND docker run --rm -v ${CMAKE_CURRENT_SOURCE_DIR}:/project --env MICROROS_LIBRARY_FOLDER=micro_ros_stm32cubemx_utils/microros_static_library_ide microros/micro_ros_static_library_builder:humble
+    COMMAND docker run --rm --network host -v ${CMAKE_CURRENT_SOURCE_DIR}:/project --env MICROROS_LIBRARY_FOLDER=micro_ros_stm32cubemx_utils/microros_static_library_ide --env http_proxy=http://127.0.0.1:7897 --env https_proxy=http://127.0.0.1:7897 --env all_proxy=socks5://127.0.0.1:7897 microros/micro_ros_static_library_builder:humble
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMENT "Building micro-ROS static library via Docker"
+    COMMENT "Building micro-ROS static library via Docker with Proxy"
 )

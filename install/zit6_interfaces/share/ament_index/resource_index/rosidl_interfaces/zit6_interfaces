@@ -1,0 +1,4 @@
+msg/ZitSetpoint.idl
+msg/ZitSetpoint.msg
+msg/ZitStatus.idl
+msg/ZitStatus.msg

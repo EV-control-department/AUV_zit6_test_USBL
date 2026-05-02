@@ -3,6 +3,16 @@ set -e
 
 export BASE_PATH=/project/$MICROROS_LIBRARY_FOLDER
 
+# 深度优化 Git 代理设置以对抗不稳定的网络
+git config --global http.proxy socks5://127.0.0.1:7897
+git config --global https.proxy socks5://127.0.0.1:7897
+git config --global http.sslVerify false
+git config --global http.version 1.1
+git config --global http.postBuffer 1048576000
+git config --global http.lowSpeedLimit 0
+git config --global http.lowSpeedTime 999999
+git config --global core.compression 0
+
 ######## Check existing library ########
 if [ -f "$BASE_PATH/libmicroros/libmicroros.a" ]; then
     echo "micro-ROS library found. Skipping..."
@@ -15,7 +25,11 @@ export RET_CFLAGS="-mcpu=cortex-m7 -mfpu=fpv5-d16 -mfloat-abi=hard"
 
 ######## Init ########
 apt-get update
-apt-get install -y gcc-arm-none-eabi
+
+# 增加重试机制以应对不稳定的代理
+for i in {1..5}; do
+    apt-get install -y --fix-missing gcc-arm-none-eabi && break || sleep 5
+done
 
 cd /uros_ws
 
