@@ -31,6 +31,11 @@ public:
     bool update(NavState& state);
     NavState getNavState() const { return state_; }
 
+    /**
+     * @brief 检查惯导数据是否新鲜 (200ms 内有更新)
+     */
+    bool isDataFresh() const;
+
     // --- 指令发送接口 ---
     
     /**
@@ -69,6 +74,7 @@ private:
     SerialPort rx_port_;          ///< 串口接收驱动
     UART_HandleTypeDef* tx_uart_; ///< 指令发送串口句柄
     uint32_t rx_total_bytes_ = 0; ///< 累计接收字节数（调试统计）
+    uint32_t last_update_ms_ = 0; ///< 上次收到有效包的时间
 
     static constexpr uint16_t kMaxFrameSize = 256;
     static constexpr uint16_t kMinFrameSize = 133;

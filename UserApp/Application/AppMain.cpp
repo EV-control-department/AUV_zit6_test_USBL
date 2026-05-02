@@ -10,6 +10,9 @@
 #include <cstdlib>
 #include <cstring>
 
+// HAL与系统头文件
+#include "stm32h7xx_hal.h"
+
 // micro-ROS headers
 #include <rcl/error_handling.h>
 #include <rcl/rcl.h>
@@ -49,6 +52,7 @@ extern "C" UART_HandleTypeDef huart7;
 extern "C" UART_HandleTypeDef huart3;
 extern "C" UART_HandleTypeDef huart2;
 extern "C" UART_HandleTypeDef huart6;
+extern "C" IWDG_HandleTypeDef hiwdg1; // 注意：H7 可能是 hiwdg1
 
 // 全局状态与控制量
 static float target_p[4] = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -71,7 +75,9 @@ static auv::NavState shared_nav_state{};
 namespace {
 
 bool isNavigationValid(const auv::NavState &nav) {
-  return (nav.imu_state >= 3 && nav.dvl_state == 1);
+  // 只要惯导进入 03 或 04 模式且数据新鲜，就认为 Ready
+  // 不再强制要求 DVL 必须立刻锁定（允许下水后锁定）
+  return ((nav.imu_state == 3 || nav.imu_state == 4) && ins_driver.isDataFresh());
 }
 
 static auv::NavState snapshotNavState() {
@@ -221,6 +227,9 @@ void UserApp_ControlTask(void *argument) {
     uint32_t arm_start_snapshot = arm_start_ms;
     taskEXIT_CRITICAL();
 
+    // 喂硬件看门狗 (由 CubeMX 生成 IWDG 初始化)
+    HAL_IWDG_Refresh(&hiwdg1);
+
     if (armed_snapshot) {
       // 上锁阈值：500ms 心跳丢失 (更加强健，容忍 10Hz 下的抖动)
       if (now - heartbeat_snapshot > 500) {
@@ -291,6 +300,45 @@ void UserApp_ControlTask(void *argument) {
   }
 }
 
+// --- micro-ROS 句柄与全局变量 ---
+static rclc_support_t support;
+static rcl_node_t node;
+static rclc_executor_t executor;
+static rcl_subscription_t setpoint_sub, arm_sub, ins_cmd_sub;
+static rcl_publisher_t pos_pub, vel_pub, thr_pub, zithbt_pub, status_pub;
+
+static std_msgs__msg__Float32MultiArray pos_fb_msg, vel_fb_msg, thr_fb_msg;
+static zit6_interfaces__msg__ZitSetpoint setpoint_msg;
+static zit6_interfaces__msg__ZitStatus status_msg;
+static std_msgs__msg__UInt8 ins_cmd_msg;
+static std_msgs__msg__UInt32 arm_msg, node_heartbeat_msg;
+
+static float pos_buf[4], vel_buf[4], thr_buf[4];
+
+// --- micro-ROS 实体清理函数 ---
+void cleanupMicroRos() {
+  // 按照初始化相反的顺序销毁
+  rclc_executor_fini(&executor);
+  
+  rcl_publisher_fini(&pos_pub, &node);
+  rcl_publisher_fini(&vel_pub, &node);
+  rcl_publisher_fini(&thr_pub, &node);
+  rcl_publisher_fini(&zithbt_pub, &node);
+  rcl_publisher_fini(&status_pub, &node);
+  
+  rcl_subscription_fini(&setpoint_sub, &node);
+  rcl_subscription_fini(&arm_sub, &node);
+  rcl_subscription_fini(&ins_cmd_sub, &node);
+  
+  rcl_node_fini(&node);
+  rclc_support_fini(&support);
+
+  // 关键：将所有句柄清零，防止重复销毁或非法访问
+  memset(&support, 0, sizeof(support));
+  memset(&node, 0, sizeof(node));
+  memset(&executor, 0, sizeof(executor));
+}
+
 void UserApp_MicroRosTask(void *argument) {
   rmw_uros_set_custom_transport(true, (void *)&huart2, cubemx_transport_open,
                                 cubemx_transport_close, cubemx_transport_write,
@@ -303,53 +351,38 @@ void UserApp_MicroRosTask(void *argument) {
   rcutils_set_default_allocator(&allocator);
 
   rcl_allocator_t rcl_allocator = rcl_get_default_allocator();
-  rclc_support_t support;
-  rcl_node_t node;
-  rclc_executor_t executor;
-  rcl_subscription_t setpoint_sub;
-  rcl_subscription_t arm_sub;
-  rcl_subscription_t ins_cmd_sub;
-  rcl_publisher_t pos_pub;
-  rcl_publisher_t vel_pub;
-  rcl_publisher_t thr_pub;
-  rcl_publisher_t zithbt_pub;
-  rcl_publisher_t status_pub;
 
-  std_msgs__msg__Float32MultiArray pos_fb_msg;
-  std_msgs__msg__Float32MultiArray vel_fb_msg;
-  std_msgs__msg__Float32MultiArray thr_fb_msg;
-  zit6_interfaces__msg__ZitSetpoint setpoint_msg;
-  zit6_interfaces__msg__ZitStatus status_msg;
-  std_msgs__msg__UInt8 ins_cmd_msg;
-  std_msgs__msg__UInt32 arm_msg;
-  std_msgs__msg__UInt32 node_heartbeat_msg;
+  uint32_t last_hbt_pub_tick = 0;
+  uint32_t last_vel_pub_tick = 0;
+  uint32_t last_thr_pub_tick = 0;
+  uint32_t last_pos_pub_tick = 0;
+  uint32_t last_status_pub_tick = 0;
 
-  static float pos_buf[4], vel_buf[4], thr_buf[4];
-  enum State { WAITING_AGENT, AGENT_CONNECTED } state = WAITING_AGENT;
-  uint32_t last_ping_tick = 0, last_pos_pub_tick = 0, last_vel_pub_tick = 0,
-           last_thr_pub_tick = 0, last_status_pub_tick = 0,
-           last_hbt_pub_tick = 0;
+  enum uros_state { WAITING_AGENT, AGENT_CONNECTED } state = WAITING_AGENT;
 
   for (;;) {
-    const uint32_t now_ms = HAL_GetTick();
-    if (state == WAITING_AGENT) {
-      if ((now_ms - last_ping_tick) >= 1000U) {
-        last_ping_tick = now_ms;
-        if (RCL_RET_OK == rmw_uros_ping_agent(10, 1)) {
-          rclc_support_init(&support, 0, NULL, &rcl_allocator);
-          rclc_node_init_default(&node, "auv_stm32_node", "", &support);
-          rmw_uros_sync_session(10);
+    uint32_t now_ms = HAL_GetTick();
 
-          zit6_interfaces__msg__ZitSetpoint__init(&setpoint_msg);
-          zit6_interfaces__msg__ZitStatus__init(&status_msg);
+    if (state == WAITING_AGENT) {
+      // 尝试 PING Agent (增加超时时间到 200ms)
+      if (RCL_RET_OK == rmw_uros_ping_agent(200, 1)) {
+        if (RCL_RET_OK == rclc_support_init(&support, 0, NULL, &rcl_allocator)) {
+          // 强制同步 Session
+          rmw_uros_sync_session(100);
+          
+          rclc_node_init_default(&node, "zit6_node", "", &support);
+
+          // 初始化消息
           std_msgs__msg__Float32MultiArray__init(&pos_fb_msg);
           pos_fb_msg.data.data = pos_buf;
           pos_fb_msg.data.size = 4;
           pos_fb_msg.data.capacity = 4;
+
           std_msgs__msg__Float32MultiArray__init(&vel_fb_msg);
           vel_fb_msg.data.data = vel_buf;
           vel_fb_msg.data.size = 4;
           vel_fb_msg.data.capacity = 4;
+
           std_msgs__msg__Float32MultiArray__init(&thr_fb_msg);
           thr_fb_msg.data.data = thr_buf;
           thr_fb_msg.data.size = 4;
@@ -357,86 +390,64 @@ void UserApp_MicroRosTask(void *argument) {
 
           std_msgs__msg__UInt32__init(&node_heartbeat_msg);
           std_msgs__msg__UInt8__init(&ins_cmd_msg);
+          zit6_interfaces__msg__ZitStatus__init(&status_msg);
 
-          rclc_publisher_init_default(
-              &pos_pub, &node,
-              ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
-              "/zit6/state/pos");
-          rclc_publisher_init_default(
-              &vel_pub, &node,
-              ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
-              "/zit6/state/vel");
-          rclc_publisher_init_default(
-              &thr_pub, &node,
-              ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray),
-              "/zit6/state/thr");
-          rclc_publisher_init_default(
-              &zithbt_pub, &node,
-              ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt32),
-              "/zit6/state/zithbt");
-          rclc_publisher_init_default(
-              &status_pub, &node,
-              ROSIDL_GET_MSG_TYPE_SUPPORT(zit6_interfaces, msg, ZitStatus),
-              "/zit6/state/memu");
+          // Publishers
+          rclc_publisher_init_default(&pos_pub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray), "/zit6/state/pos");
+          rclc_publisher_init_default(&vel_pub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray), "/zit6/state/vel");
+          rclc_publisher_init_default(&thr_pub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray), "/zit6/state/thr");
+          rclc_publisher_init_default(&zithbt_pub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt32), "/zit6/state/zithbt");
+          rclc_publisher_init_default(&status_pub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(zit6_interfaces, msg, ZitStatus), "/zit6/state/memu");
 
-          rclc_subscription_init_default(
-              &setpoint_sub, &node,
-              ROSIDL_GET_MSG_TYPE_SUPPORT(zit6_interfaces, msg, ZitSetpoint),
-              "/zit6/cmd/setpoint");
-          rclc_subscription_init_default(
-              &arm_sub, &node,
-              ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt32),
-              "/zit6/cmd/agxhbt");
-          rclc_subscription_init_default(
-              &ins_cmd_sub, &node,
-              ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt8),
-              "/zit6/cmd/ins");
+          // Subscriptions
+          rclc_subscription_init_default(&setpoint_sub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(zit6_interfaces, msg, ZitSetpoint), "/zit6/cmd/setpoint");
+          rclc_subscription_init_default(&arm_sub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt32), "/zit6/cmd/agxhbt");
+          rclc_subscription_init_default(&ins_cmd_sub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt8), "/zit6/cmd/ins");
 
+          // Executor
           rclc_executor_init(&executor, &support.context, 3, &rcl_allocator);
-          rclc_executor_add_subscription(&executor, &setpoint_sub,
-                                         &setpoint_msg, &onZitSetpoint,
-                                         ON_NEW_DATA);
-          rclc_executor_add_subscription(&executor, &arm_sub, &arm_msg,
-                                         &onArmHeartbeat, ON_NEW_DATA);
-          rclc_executor_add_subscription(&executor, &ins_cmd_sub, &ins_cmd_msg,
-                                         &onInsCommand, ON_NEW_DATA);
+          rclc_executor_add_subscription(&executor, &setpoint_sub, &setpoint_msg, &onZitSetpoint, ON_NEW_DATA);
+          rclc_executor_add_subscription(&executor, &arm_sub, &arm_msg, &onArmHeartbeat, ON_NEW_DATA);
+          rclc_executor_add_subscription(&executor, &ins_cmd_sub, &ins_cmd_msg, &onInsCommand, ON_NEW_DATA);
+          
           state = AGENT_CONNECTED;
         }
+      } else {
+        // PING 失败，稍微等待后再试
+        vTaskDelay(pdMS_TO_TICKS(100));
       }
     } else {
-      if (RCL_RET_OK != rmw_uros_ping_agent(10, 1)) {
+      // 检查 Agent 是否在线 (PING)，如果断开则进入重连流程
+      // 增加超时到 500ms，重试 3 次，防止因为网络抖动误判断开
+      if (RCL_RET_OK != rmw_uros_ping_agent(500, 3)) {
+        cleanupMicroRos();
         state = WAITING_AGENT;
       } else {
         rclc_executor_spin_some(&executor, RCL_MS_TO_NS(1));
+        
+        // 发布频率管理
         if (now_ms - last_hbt_pub_tick >= 1000) {
           last_hbt_pub_tick = now_ms;
           node_heartbeat_msg.data = now_ms;
           rcl_publish(&zithbt_pub, &node_heartbeat_msg, NULL);
         }
-        if (now_ms - last_vel_pub_tick >= 16) {
+        if (now_ms - last_vel_pub_tick >= 20) {
           last_vel_pub_tick = now_ms;
           auto nav = snapshotNavState();
-          vel_buf[0] = nav.vx;
-          vel_buf[1] = nav.vy;
-          vel_buf[2] = nav.vz;
-          vel_buf[3] = nav.vyaw;
+          vel_buf[0] = nav.vx; vel_buf[1] = nav.vy; vel_buf[2] = nav.vz; vel_buf[3] = nav.vyaw;
           rcl_publish(&vel_pub, &vel_fb_msg, NULL);
         }
         if (now_ms - last_thr_pub_tick >= 33) {
           last_thr_pub_tick = now_ms;
           taskENTER_CRITICAL();
-          for (int i = 0; i < 4; i++)
-            thr_buf[i] = last_output_forces[i];
+          for (int i = 0; i < 4; i++) thr_buf[i] = last_output_forces[i];
           taskEXIT_CRITICAL();
           rcl_publish(&thr_pub, &thr_fb_msg, NULL);
         }
         if (now_ms - last_pos_pub_tick >= 33) {
           last_pos_pub_tick = now_ms;
           auto nav = snapshotNavState();
-          pos_buf[0] = nav.x;
-          pos_buf[1] = nav.y;
-          pos_buf[2] = nav.z;
-          pos_buf[3] = nav.yaw;
+          pos_buf[0] = nav.x; pos_buf[1] = nav.y; pos_buf[2] = nav.z; pos_buf[3] = nav.yaw;
           rcl_publish(&pos_pub, &pos_fb_msg, NULL);
         }
         if (now_ms - last_status_pub_tick >= 100) {
@@ -448,11 +459,9 @@ void UserApp_MicroRosTask(void *argument) {
           status_msg.control_level = (uint8_t)chassis.getControlLevel();
           status_msg.ins_state = nav.imu_state;
           status_msg.navigation_ready = isNavigationValid(nav);
-          for (int i = 0; i < 4; i++) {
-            status_msg.forces[i] = last_output_forces[i];
-          }
+          for (int i = 0; i < 4; i++) status_msg.forces[i] = last_output_forces[i];
           status_msg.cycle_time_ms = (float)last_dt_ms;
-          status_msg.battery_voltage = 0.0f; // 待硬件接入
+          status_msg.battery_voltage = 0.0f;
           status_msg.error_flags = 0;
           taskEXIT_CRITICAL();
           rcl_publish(&status_pub, &status_msg, NULL);

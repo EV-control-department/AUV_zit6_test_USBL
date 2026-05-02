@@ -80,6 +80,10 @@ void INS_Driver::setInitialPosition(double lat, double lon) {
     sendCommand(0x20, data, 8);
 }
 
+bool INS_Driver::isDataFresh() const {
+    return (HAL_GetTick() - last_update_ms_ < 200);
+}
+
 bool INS_Driver::update(NavState& state) {
     uint8_t temp_buf[256];
     uint16_t len = rx_port_.read(temp_buf, 256);
@@ -89,6 +93,7 @@ bool INS_Driver::update(NavState& state) {
         if (parseByte(temp_buf[i])) {
             if (validateFrame()) {
                 decodePacket(state);
+                last_update_ms_ = HAL_GetTick(); // 刷新时间戳
                 has_new_frame = true;
             }
         }
@@ -110,7 +115,7 @@ bool INS_Driver::parseByte(uint8_t b) {
         return false;
     }
     
-    // UNAV-IP 系列 V2.0 协议：总长度 133 字节
+    // UNAV-IP 133字节标准帧 (根据截图确认)
     return frame_len_ == 133;
 }
 
@@ -138,51 +143,55 @@ bool INS_Driver::validateFrame() {
 }
 
 void INS_Driver::decodePacket(NavState& s) {
+    // 严格按照截图偏移量解析
+    
+    // 1. 姿态 (Offset 2, 6, 10)
+    memcpy(&s.roll,  packet_buf_ + 2, 4);
+    memcpy(&s.pitch, packet_buf_ + 6, 4);
+    memcpy(&s.yaw,   packet_buf_ + 10, 4);
+    
+    // 2. 角速度 (Offset 14, 18, 22)
+    memcpy(&s.vroll,  packet_buf_ + 14, 4);
+    memcpy(&s.vpitch, packet_buf_ + 18, 4);
+    memcpy(&s.vyaw,   packet_buf_ + 22, 4);
+    
+    // 3. 机体系线速度 (Offset 26, 30, 34) -> vx, vy, vz
+    memcpy(&s.vx, packet_buf_ + 26, 4);
+    memcpy(&s.vy, packet_buf_ + 30, 4);
+    memcpy(&s.vz, packet_buf_ + 34, 4);
+
+    // 4. 经纬度 (Offset 38, 42, int32, 1e7)
+    int32_t lat_i, lon_i;
+    memcpy(&lat_i, packet_buf_ + 38, 4);
+    memcpy(&lon_i, packet_buf_ + 42, 4);
+    s.lat = lat_i * 1e-7;
+    s.lon = lon_i * 1e-7;
+
+    // 5. 深度 (改为 Offset 107: 压力计数据) -> z
+    memcpy(&s.z, packet_buf_ + 107, 4);
+
+    // 6. 位置增量 (Offset 99, 103, float) -> x, y
+    memcpy(&s.x, packet_buf_ + 99, 4);
+    memcpy(&s.y, packet_buf_ + 103, 4);
+
+    // 7. 模式与状态 (Offset 129 模式, Offset 115 状态)
+    s.imu_state = packet_buf_[129]; 
+    s.dvl_state = (packet_buf_[115] & 0x02) ? 1 : 0; 
+    
+    s.timestamp = HAL_GetTick();
+
+    // 更新内部缓存
+    state_ = s;
+
+    // 转换单位 (Deg -> Rad)
     const float kDeg2Rad = 0.0174532925f;
+    s.roll *= kDeg2Rad;
+    s.pitch *= kDeg2Rad;
+    s.yaw *= kDeg2Rad;
+    s.vroll *= kDeg2Rad;
+    s.vpitch *= kDeg2Rad;
+    s.vyaw *= kDeg2Rad;
 
-    // 1. 姿态 (Offset 2, 6, 10 为 Roll, Pitch, Yaw, 类型为 float, 单位 deg)
-    float roll_deg, pitch_deg, yaw_deg;
-    memcpy(&roll_deg, packet_buf_ + 2, 4);
-    memcpy(&pitch_deg, packet_buf_ + 6, 4);
-    memcpy(&yaw_deg, packet_buf_ + 10, 4);
-    
-    state_.roll = roll_deg * kDeg2Rad;
-    state_.pitch = pitch_deg * kDeg2Rad;
-    state_.yaw = yaw_deg * kDeg2Rad;
-
-    // 1.1 角速度 (Offset 14, 18, 22 为 Gyro X, Y, Z, 类型为 float, 单位 deg/s)
-    float gx, gy, gz;
-    memcpy(&gx, packet_buf_ + 14, 4);
-    memcpy(&gy, packet_buf_ + 18, 4);
-    memcpy(&gz, packet_buf_ + 22, 4);
-    state_.vroll = gx * kDeg2Rad;
-    state_.vpitch = gy * kDeg2Rad;
-    state_.vyaw = gz * kDeg2Rad;
-
-    // 2. 机体系线速度 (Offset 26, 30, 34 为 Vx, Vy, Vz, 类型为 float, 单位 m/s)
-    memcpy(&state_.vx, packet_buf_ + 26, 4);
-    memcpy(&state_.vy, packet_buf_ + 30, 4);
-    memcpy(&state_.vz, packet_buf_ + 34, 4);
-
-    // 3. 经纬度信息 (Offset 38, 42, int32, 单位 1e-7 deg)
-    int32_t lat_int, lon_int;
-    memcpy(&lat_int, packet_buf_ + 38, 4);
-    memcpy(&lon_int, packet_buf_ + 42, 4);
-    
-    state_.lat = lat_int * 1e-7;
-    state_.lon = lon_int * 1e-7;
-
-    // 4. 深度 (Offset 46, float, 单位 m)
-    // 注意：手册中 Offset 46 是 SINS 深度，Offset 107 是压力计深度
-    // 通常使用压力计深度更为准确
-    memcpy(&state_.z, packet_buf_ + 107, 4);
-
-    // 5. 状态位与模式
-    state_.imu_state = packet_buf_[129]; // 导航模式 (0:Init, 1:SINS, 2:SINS+GPS, 3:SINS+DVL, 4:SINS+GPS+DVL)
-    state_.dvl_state = (packet_buf_[115] & 0x02) ? 1 : 0; // bit 1 为 DVL 有效位
-    
-    state_.timestamp = HAL_GetTick();
-    s = state_; 
     frame_len_ = 0; 
 }
 
