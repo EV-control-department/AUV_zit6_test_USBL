@@ -334,10 +334,6 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    /* USART2 interrupt Init */
-    HAL_NVIC_SetPriority(USART2_IRQn, 5, 0);
-    HAL_NVIC_EnableIRQ(USART2_IRQn);
-
     /* USART2 DMA Init */
     /* USART2_RX Init */
     hdma_usart2_rx.Instance = DMA1_Stream0;
@@ -357,10 +353,6 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
 
     __HAL_LINKDMA(uartHandle,hdmarx,hdma_usart2_rx);
 
-    /* USART2 DMA RX interrupt Init */
-    HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 5, 0);
-    HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
-
     /* USART2_TX Init */
     hdma_usart2_tx.Instance = DMA1_Stream1;
     hdma_usart2_tx.Init.Request = DMA_REQUEST_USART2_TX;
@@ -379,10 +371,9 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
 
     __HAL_LINKDMA(uartHandle,hdmatx,hdma_usart2_tx);
 
-    /* USART2 DMA TX interrupt Init */
-    HAL_NVIC_SetPriority(DMA1_Stream1_IRQn, 5, 0);
-    HAL_NVIC_EnableIRQ(DMA1_Stream1_IRQn);
-
+    /* USART2 interrupt Init */
+    HAL_NVIC_SetPriority(USART2_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(USART2_IRQn);
   /* USER CODE BEGIN USART2_MspInit 1 */
 
   /* USER CODE END USART2_MspInit 1 */
@@ -435,10 +426,6 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     }
 
     __HAL_LINKDMA(uartHandle,hdmatx,hdma_usart3_tx);
-
-    /* USART3 DMA TX interrupt Init */
-    HAL_NVIC_SetPriority(DMA1_Stream3_IRQn, 5, 0);
-    HAL_NVIC_EnableIRQ(DMA1_Stream3_IRQn);
 
     /* USART3 interrupt Init */
     HAL_NVIC_SetPriority(USART3_IRQn, 5, 0);
@@ -510,8 +497,6 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
     /* USART2 DMA DeInit */
     HAL_DMA_DeInit(uartHandle->hdmarx);
     HAL_DMA_DeInit(uartHandle->hdmatx);
-    HAL_NVIC_DisableIRQ(DMA1_Stream0_IRQn);
-    HAL_NVIC_DisableIRQ(DMA1_Stream1_IRQn);
 
     /* USART2 interrupt Deinit */
     HAL_NVIC_DisableIRQ(USART2_IRQn);
@@ -535,7 +520,6 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 
     /* USART3 DMA DeInit */
     HAL_DMA_DeInit(uartHandle->hdmatx);
-    HAL_NVIC_DisableIRQ(DMA1_Stream3_IRQn);
 
     /* USART3 interrupt Deinit */
     HAL_NVIC_DisableIRQ(USART3_IRQn);
