@@ -58,6 +58,7 @@ static auv::control::ChassisManager chassis;
 static bool is_system_armed = false;
 static uint32_t arm_heartbeat_count = 0;
 static uint32_t last_arm_heartbeat_ms = 0;
+static uint32_t last_arm_heartbeat_data = 0;
 static uint32_t arm_start_ms = 0;
 static auv::NavState shared_nav_state{};
 
@@ -143,10 +144,13 @@ void onZitSetpoint(const void *msgin) {
 }
 
 void onArmHeartbeat(const void *msgin) {
-    (void)msgin;
+    const auto *msg = (const std_msgs__msg__UInt32 *)msgin;
     taskENTER_CRITICAL();
     last_arm_heartbeat_ms = HAL_GetTick();
+    last_arm_heartbeat_data = msg->data;
+    
     if (!is_system_armed) {
+        // 正常的解锁心跳逻辑
         if (arm_heartbeat_count == 0) arm_start_ms = last_arm_heartbeat_ms;
         arm_heartbeat_count++;
     }
@@ -194,24 +198,28 @@ void UserApp_ControlTask(void *argument) {
                 taskENTER_CRITICAL();
                 is_system_armed = false; arm_heartbeat_count = 0;
                 taskEXIT_CRITICAL();
-                float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw};
-                float actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
+                float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw}, actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
                 chassis.setControlLevel(auv::ControlLevel::NONE, actual_p, actual_v);
             }
         } else {
+            // 确保未上锁时，控制能级始终为 NONE
+            if (chassis.getControlLevel() != auv::ControlLevel::NONE) {
+                float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw}, actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
+                chassis.setControlLevel(auv::ControlLevel::NONE, actual_p, actual_v);
+            }
+            
             // 解锁条件：收到 >=10 次心跳且持续至少 1000ms（10Hz * 1s）
             if (heartbeat_count_snapshot >= 10 && (now - arm_start_snapshot >= 1000)) {
-                if (isNavigationValid(nav)) {
+                taskENTER_CRITICAL();
+                uint32_t hbt_data = last_arm_heartbeat_data;
+                taskEXIT_CRITICAL();
+
+                // 正常模式需要导航就绪；hbt_data == 3 为遥控模式，不需要导航就绪
+                if (hbt_data == 3 || isNavigationValid(nav)) {
                     taskENTER_CRITICAL();
                     is_system_armed = true;
                     taskEXIT_CRITICAL();
-                    ins_driver.resetPosition();
-                    for (int i = 0; i < 4; i++) target_p[i] = 0.0f;
-                    float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw};
-                    float actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
-                    chassis.setControlLevel(auv::ControlLevel::POSITION, actual_p, actual_v);
                 } else {
-                    // 导航未就绪时，清计数并等待
                     taskENTER_CRITICAL();
                     arm_heartbeat_count = 0;
                     taskEXIT_CRITICAL();
@@ -249,15 +257,15 @@ void UserApp_MicroRosTask(void *argument) {
     rcl_allocator_t rcl_allocator = rcl_get_default_allocator();
     rclc_support_t support; rcl_node_t node; rclc_executor_t executor;
     rcl_subscription_t setpoint_sub; rcl_subscription_t arm_sub; rcl_subscription_t ins_cmd_sub;
-    rcl_publisher_t pos_pub; rcl_publisher_t vel_pub; rcl_publisher_t thr_pub; rcl_publisher_t zithbt_pub; rcl_publisher_t status_pub; rcl_publisher_t isarm_pub;
+    rcl_publisher_t pos_pub; rcl_publisher_t vel_pub; rcl_publisher_t thr_pub; rcl_publisher_t zithbt_pub; rcl_publisher_t status_pub;
 
     std_msgs__msg__Float32MultiArray pos_fb_msg; std_msgs__msg__Float32MultiArray vel_fb_msg; std_msgs__msg__Float32MultiArray thr_fb_msg;
     zit6_interfaces__msg__ZitSetpoint setpoint_msg; zit6_interfaces__msg__ZitStatus status_msg;
-    std_msgs__msg__UInt8 ins_cmd_msg; std_msgs__msg__UInt32 arm_msg; std_msgs__msg__UInt32 node_heartbeat_msg; std_msgs__msg__Bool isarm_msg;
+    std_msgs__msg__UInt8 ins_cmd_msg; std_msgs__msg__UInt32 arm_msg; std_msgs__msg__UInt32 node_heartbeat_msg;
 
     static float pos_buf[4], vel_buf[4], thr_buf[4];
     enum State { WAITING_AGENT, AGENT_CONNECTED } state = WAITING_AGENT;
-    uint32_t last_ping_tick = 0, last_pos_pub_tick = 0, last_vel_pub_tick = 0, last_thr_pub_tick = 0, last_status_pub_tick = 0, last_isarm_pub_tick = 0, last_hbt_pub_tick = 0;
+    uint32_t last_ping_tick = 0, last_pos_pub_tick = 0, last_vel_pub_tick = 0, last_thr_pub_tick = 0, last_status_pub_tick = 0, last_hbt_pub_tick = 0;
 
     for (;;) {
         const uint32_t now_ms = HAL_GetTick();
@@ -280,14 +288,12 @@ void UserApp_MicroRosTask(void *argument) {
 
                     std_msgs__msg__UInt32__init(&node_heartbeat_msg);
                     std_msgs__msg__UInt8__init(&ins_cmd_msg);
-                    std_msgs__msg__Bool__init(&isarm_msg);
 
                     rclc_publisher_init_default(&pos_pub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray), "/zit6/state/pos");
                     rclc_publisher_init_default(&vel_pub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray), "/zit6/state/vel");
                     rclc_publisher_init_default(&thr_pub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray), "/zit6/state/thr");
                     rclc_publisher_init_default(&zithbt_pub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt32), "/zit6/state/zithbt");
                     rclc_publisher_init_default(&status_pub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(zit6_interfaces, msg, ZitStatus), "/zit6/state/status");
-                    rclc_publisher_init_default(&isarm_pub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool), "/zit6/state/isarm");
 
                     rclc_subscription_init_default(&setpoint_sub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(zit6_interfaces, msg, ZitSetpoint), "/zit6/cmd/setpoint");
                     rclc_subscription_init_default(&arm_sub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt32), "/zit6/cmd/agxhbt");
@@ -337,12 +343,6 @@ void UserApp_MicroRosTask(void *argument) {
                     status_msg.error_flags = 0;       // 实际应根据诊断结果置位
                     taskEXIT_CRITICAL();
                     rcl_publish(&status_pub, &status_msg, NULL);
-                }
-                if (now_ms - last_isarm_pub_tick >= 100) {
-                    taskENTER_CRITICAL();
-                    last_isarm_pub_tick = now_ms; isarm_msg.data = is_system_armed;
-                    taskEXIT_CRITICAL();
-                    rcl_publish(&isarm_pub, &isarm_msg, NULL);
                 }
             }
         }
