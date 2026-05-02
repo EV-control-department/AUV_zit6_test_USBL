@@ -94,21 +94,32 @@ std::array<float, 4> ChassisManager::update(const float actual_p[4],
   if (level_ == ControlLevel::NONE)
     return output_forces;
 
+  std::array<float, 4> v_target_world = {0};
   for (int i = 0; i < 4; i++) {
     ProfileState d = profiles_[i].update(target_p[i], dt);
-    float v_ref = 0.0f;
     if (level_ == ControlLevel::POSITION) {
-      v_ref = pos_pids_[i].compute(d.p - actual_p[i], dt) + d.v;
+      v_target_world[i] = pos_pids_[i].compute(d.p - actual_p[i], dt) + d.v;
     } else {
-      v_ref = d.v;
+      v_target_world[i] = d.v;
     }
+  }
 
+  // 坐标系转换：将世界系 (NED) 的目标速度转换为机体系 (Body)
+  float v_target_body[4];
+  CoordinateManager::worldToBody(actual_p[3], v_target_world[0], v_target_world[1], 
+                                  v_target_body[0], v_target_body[1]);
+  v_target_body[2] = v_target_world[2]; // Z 轴相同
+  v_target_body[3] = v_target_world[3]; // Yaw 轴相同
+
+  for (int i = 0; i < 4; i++) {
     float f_base = 0.0f;
     if (level_ == ControlLevel::POSITION || level_ == ControlLevel::VELOCITY) {
-      float accel_ff = 1.0f * d.a;
-      f_base = vel_pids_[i].compute(v_ref - actual_v[i], dt) + accel_ff;
+      // 使用机体系下的目标速度与真实速度进行闭环
+      f_base = vel_pids_[i].compute(v_target_body[i] - actual_v[i], dt);
+      
+      // 前馈处理（加速度前馈暂维持原轴向，实际应考虑旋转，但小型 AUV 简化处理）
+      f_base += 1.0f * profiles_[i].getState().a;
     }
-
     output_forces[i] = f_base + target_forces_[i];
   }
 
