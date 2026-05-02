@@ -3,45 +3,50 @@
 # 确保脚本在出错时停止
 set -e
 
-# 获取根目录绝对路径
+# 获取当前目录
 PROJECT_ROOT=$(pwd)
 
 echo "========================================================="
-echo "   AUV Zit6 - Integrated Interface Build Script"
+echo "   AUV Zit6 - Integrated Build Script"
 echo "========================================================="
 
-# 1. 生成单片机静态库 (micro-ROS Static Library)
-echo "[1/2] Generating micro-ROS static library for STM32..."
-cd micro_ros_stm32cubemx_utils/microros_static_library_ide/library_generation
+# 0. 准备工作
+echo "[0/3] Preparing environment..."
+# 仅清理库文件，不清理整个 build 目录（除非 build 目录损坏）
+sudo rm -rf micro_ros_stm32cubemx_utils/microros_static_library_ide/libmicroros
 
-# 执行 micro-ROS 官方生成脚本
-# 注意：这通常需要本地已配置好 arm-none-eabi-gcc 路径或在 Docker 环境中运行
-./library_generation.sh
+# 同步接口定义 (解决 Docker 内部软链接失效问题)
+EXTRA_PKG_DIR="micro_ros_stm32cubemx_utils/microros_static_library_ide/library_generation/extra_packages"
+mkdir -p "$EXTRA_PKG_DIR"
+if [ -L "$EXTRA_PKG_DIR/zit6_interfaces" ]; then rm "$EXTRA_PKG_DIR/zit6_interfaces"; fi
+cp -rL zit6_interfaces "$EXTRA_PKG_DIR/"
+
+# 1. 生成 micro-ROS 静态库 (使用 Docker)
+echo "[1/3] Generating micro-ROS library via Docker..."
+# 恢复使用官方镜像以防本地镜像有问题
+docker run --rm --network host --name microros_builder \
+  -v "${PROJECT_ROOT}:/project" \
+  --env MICROROS_LIBRARY_FOLDER=micro_ros_stm32cubemx_utils/microros_static_library_ide \
+  --env http_proxy=http://127.0.0.1:7897 \
+  --env https_proxy=http://127.0.0.1:7897 \
+  --env all_proxy=socks5://127.0.0.1:7897 \
+  microros/micro_ros_static_library_builder:humble
 
 echo ">>> micro-ROS library generation finished."
-cd $PROJECT_ROOT
 
-# 2. 编译上位机接口 (ROS 2 Host Install)
-echo "[2/2] Building ROS 2 interfaces for Host..."
+# 2. 编译 STM32 固件
+echo "[2/3] Building STM32 firmware..."
+mkdir -p build
+# 使用项目自带的 ARM 工具链文件重新生成配置
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_TOOLCHAIN_FILE=cmake/gcc-arm-none-eabi.cmake
+cmake --build build
 
-# 检查是否已 source ROS 2 环境
-if [ -z "$ROS_DISTRO" ]; then
-    echo "Warning: ROS_DISTRO is not set. Trying to source ROS 2 Jazzy..."
-    if [ -f /opt/ros/jazzy/setup.bash ]; then
-        source /opt/ros/jazzy/setup.bash
-    elif [ -f /opt/ros/humble/setup.bash ]; then
-        source /opt/ros/humble/setup.bash
-    else
-        echo "Error: ROS 2 environment not found. Please source your ROS 2 setup.bash first."
-        exit 1
-    fi
-fi
-
-# 使用 colcon 编译
+# 3. 编译上位机接口
+echo "[3/3] Building ROS 2 host interfaces..."
+if [ -f /opt/ros/humble/setup.bash ]; then source /opt/ros/humble/setup.bash; fi
+if [ -f /opt/ros/jazzy/setup.bash ]; then source /opt/ros/jazzy/setup.bash; fi
 colcon build --packages-select zit6_interfaces --symlink-install
 
 echo "========================================================="
-echo "   Build Complete! "
-echo "   - MCU Lib: micro_ros_stm32cubemx_utils/microros_static_library_ide/libmicroros"
-echo "   - Host Install: install/zit6_interfaces"
+echo "   Build Success!"
 echo "========================================================="

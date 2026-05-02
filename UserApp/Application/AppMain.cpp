@@ -191,6 +191,9 @@ void onInsCommand(const void *msgin) {
   case 4:
     ins_driver.resetPosition();
     break;
+  case 5:
+    ins_driver.setInitialPosition(30.0, 120.0);
+    break;
   }
 }
 
@@ -219,8 +222,8 @@ void UserApp_ControlTask(void *argument) {
     taskEXIT_CRITICAL();
 
     if (armed_snapshot) {
-      // 上锁阈值：200ms 心跳丢失
-      if (now - heartbeat_snapshot > 200) {
+      // 上锁阈值：500ms 心跳丢失 (更加强健，容忍 10Hz 下的抖动)
+      if (now - heartbeat_snapshot > 500) {
         taskENTER_CRITICAL();
         is_system_armed = false;
         arm_heartbeat_count = 0;
@@ -255,16 +258,16 @@ void UserApp_ControlTask(void *argument) {
           taskEXIT_CRITICAL();
         }
       }
-      // 心跳窗口：若最后一次心跳超过 600ms，则重置计数
-      if (now - heartbeat_snapshot > 600) {
+      // 心跳窗口：若最后一次心跳超过 1000ms，则重置计数
+      if (now - heartbeat_snapshot > 1000) {
         taskENTER_CRITICAL();
         arm_heartbeat_count = 0;
         taskEXIT_CRITICAL();
       }
     }
 
-    float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw},
-          actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
+        float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw},
+              actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
     float target_snapshot[4];
     taskENTER_CRITICAL();
     for (int i = 0; i < 4; i++)
@@ -374,7 +377,7 @@ void UserApp_MicroRosTask(void *argument) {
           rclc_publisher_init_default(
               &status_pub, &node,
               ROSIDL_GET_MSG_TYPE_SUPPORT(zit6_interfaces, msg, ZitStatus),
-              "/zit6/state/status");
+              "/zit6/state/memu");
 
           rclc_subscription_init_default(
               &setpoint_sub, &node,
@@ -438,16 +441,19 @@ void UserApp_MicroRosTask(void *argument) {
         }
         if (now_ms - last_status_pub_tick >= 100) {
           last_status_pub_tick = now_ms;
-          auto nav = snapshotNavState();
+          auv::NavState nav = snapshotNavState();
           taskENTER_CRITICAL();
           status_msg.is_armed = is_system_armed;
+          status_msg.arm_mode = (uint8_t)last_arm_heartbeat_data;
           status_msg.control_level = (uint8_t)chassis.getControlLevel();
+          status_msg.ins_state = nav.imu_state;
           status_msg.navigation_ready = isNavigationValid(nav);
-          for (int i = 0; i < 4; i++)
+          for (int i = 0; i < 4; i++) {
             status_msg.forces[i] = last_output_forces[i];
-          status_msg.cycle_time_ms = last_dt_ms;
-          status_msg.battery_voltage = 24.1f; // 实际应接 ADC
-          status_msg.error_flags = 0;         // 实际应根据诊断结果置位
+          }
+          status_msg.cycle_time_ms = (float)last_dt_ms;
+          status_msg.battery_voltage = 0.0f; // 待硬件接入
+          status_msg.error_flags = 0;
           taskEXIT_CRITICAL();
           rcl_publish(&status_pub, &status_msg, NULL);
         }

@@ -21,7 +21,9 @@ extern "C"
 typedef struct zit6_interfaces__msg__ZitStatus
 {
   bool is_armed;
+  uint8_t arm_mode;
   uint8_t control_level;
+  uint8_t ins_state;
   bool navigation_ready;
   float forces[4];
   float cycle_time_ms;

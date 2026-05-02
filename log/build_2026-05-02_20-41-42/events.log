@@ -1,0 +1,288 @@
+[0.000000] (-) TimerEvent: {}
+[0.000220] (-) JobUnselected: {'identifier': 'micro_ros_stmcube'}
+[0.000321] (-) JobUnselected: {'identifier': 'stm32cubemx'}
+[0.000464] (zit6_interfaces) JobQueued: {'identifier': 'zit6_interfaces', 'dependencies': OrderedDict()}
+[0.000494] (zit6_interfaces) JobStarted: {'identifier': 'zit6_interfaces'}
+[0.006951] (zit6_interfaces) JobProgress: {'identifier': 'zit6_interfaces', 'progress': 'cmake'}
+[0.007393] (zit6_interfaces) Command: {'cmd': ['/usr/bin/cmake', '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/zit6_interfaces', '-DAMENT_CMAKE_SYMLINK_INSTALL=1', '-DCMAKE_INSTALL_PREFIX=/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces'], 'cwd': '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build/zit6_interfaces', 'env': OrderedDict({'SUDO_GID': '1000', 'MAIL': '/var/mail/root', 'USER': 'root', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/opt/ros/jazzy/opt/rviz_ogre_vendor/lib:/opt/ros/jazzy/lib/x86_64-linux-gnu:/opt/ros/jazzy/opt/gz_math_vendor/lib:/opt/ros/jazzy/opt/gz_utils_vendor/lib:/opt/ros/jazzy/opt/gz_cmake_vendor/lib:/opt/ros/jazzy/lib', 'HOME': '/root', 'ROS_PYTHON_VERSION': '3', 'COLORTERM': 'truecolor', 'SUDO_UID': '1000', 'ROS_DISTRO': 'jazzy', 'GTK_IM_MODULE': 'fcitx5', 'LOGNAME': 'root', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'TERM': 'xterm-256color', 'PATH': '/opt/ros/jazzy/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin', 'DISPLAY': ':1', 'LANG': 'zh_CN.UTF-8', 'XDG_CURRENT_DESKTOP': 'ubuntu:GNOME', 'XMODIFIERS': '@im=fcitx5', 'XAUTHORITY': '/run/user/1000/gdm/Xauthority', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=00:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.avif=01;35:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:*~=00;90:*#=00;90:*.bak=00;90:*.crdownload=00;90:*.dpkg-dist=00;90:*.dpkg-new=00;90:*.dpkg-old=00;90:*.dpkg-tmp=00;90:*.old=00;90:*.orig=00;90:*.part=00;90:*.rej=00;90:*.rpmnew=00;90:*.rpmorig=00;90:*.rpmsave=00;90:*.swp=00;90:*.tmp=00;90:*.ucf-dist=00;90:*.ucf-new=00;90:*.ucf-old=00;90:', 'SUDO_COMMAND': './build_lib.sh', 'AMENT_PREFIX_PATH': '/opt/ros/jazzy', 'SHELL': '/bin/bash', 'SUDO_USER': 'doc049', 'ROS_AUTOMATIC_DISCOVERY_RANGE': 'SUBNET', 'QT_IM_MODULE': 'fcitx5', 'PWD': '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build/zit6_interfaces', 'PYTHONPATH': '/opt/ros/jazzy/lib/python3.12/site-packages', 'COLCON': '1', 'CMAKE_PREFIX_PATH': '/opt/ros/jazzy/opt/gz_math_vendor:/opt/ros/jazzy/opt/gz_utils_vendor:/opt/ros/jazzy/opt/gz_cmake_vendor:/opt/ros/jazzy'}), 'shell': False}
+[0.049405] (zit6_interfaces) StdoutLine: {'line': b'-- The C compiler identification is GNU 13.3.0\n'}
+[0.083863] (zit6_interfaces) StdoutLine: {'line': b'-- The CXX compiler identification is GNU 13.3.0\n'}
+[0.095155] (zit6_interfaces) StdoutLine: {'line': b'-- Detecting C compiler ABI info\n'}
+[0.099724] (-) TimerEvent: {}
+[0.159598] (zit6_interfaces) StdoutLine: {'line': b'-- Detecting C compiler ABI info - done\n'}
+[0.165094] (zit6_interfaces) StdoutLine: {'line': b'-- Check for working C compiler: /usr/bin/cc - skipped\n'}
+[0.165262] (zit6_interfaces) StdoutLine: {'line': b'-- Detecting C compile features\n'}
+[0.165499] (zit6_interfaces) StdoutLine: {'line': b'-- Detecting C compile features - done\n'}
+[0.171672] (zit6_interfaces) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info\n'}
+[0.199810] (-) TimerEvent: {}
+[0.240544] (zit6_interfaces) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info - done\n'}
+[0.246431] (zit6_interfaces) StdoutLine: {'line': b'-- Check for working CXX compiler: /usr/bin/c++ - skipped\n'}
+[0.246615] (zit6_interfaces) StdoutLine: {'line': b'-- Detecting CXX compile features\n'}
+[0.246908] (zit6_interfaces) StdoutLine: {'line': b'-- Detecting CXX compile features - done\n'}
+[0.256818] (zit6_interfaces) StdoutLine: {'line': b'-- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)\n'}
+[0.299900] (-) TimerEvent: {}
+[0.359141] (zit6_interfaces) StdoutLine: {'line': b'-- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter \n'}
+[0.399995] (-) TimerEvent: {}
+[0.409692] (zit6_interfaces) StdoutLine: {'line': b'-- Override CMake install command with custom implementation using symlinks instead of copying resources\n'}
+[0.437292] (zit6_interfaces) StdoutLine: {'line': b'-- Found rosidl_default_generators: 1.6.0 (/opt/ros/jazzy/share/rosidl_default_generators/cmake)\n'}
+[0.443349] (zit6_interfaces) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c\n'}
+[0.491447] (zit6_interfaces) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp\n'}
+[0.500074] (-) TimerEvent: {}
+[0.527749] (zit6_interfaces) StdoutLine: {'line': b'-- Found rosidl_adapter: 4.6.7 (/opt/ros/jazzy/share/rosidl_adapter/cmake)\n'}
+[0.600188] (-) TimerEvent: {}
+[0.700538] (-) TimerEvent: {}
+[0.800887] (-) TimerEvent: {}
+[0.901108] (-) TimerEvent: {}
+[0.952353] (zit6_interfaces) StdoutLine: {'line': b'-- Found ament_cmake_ros: 0.12.0 (/opt/ros/jazzy/share/ament_cmake_ros/cmake)\n'}
+[1.001209] (-) TimerEvent: {}
+[1.101439] (-) TimerEvent: {}
+[1.201665] (-) TimerEvent: {}
+[1.247358] (zit6_interfaces) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c\n'}
+[1.301763] (-) TimerEvent: {}
+[1.401979] (-) TimerEvent: {}
+[1.502191] (-) TimerEvent: {}
+[1.602407] (-) TimerEvent: {}
+[1.634300] (zit6_interfaces) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp\n'}
+[1.637068] (zit6_interfaces) StdoutLine: {'line': b'-- Found python_cmake_module: 0.11.1 (/opt/ros/jazzy/share/python_cmake_module/cmake)\n'}
+[1.702459] (-) TimerEvent: {}
+[1.730711] (zit6_interfaces) StdoutLine: {'line': b'-- Found PythonExtra: /usr/bin/python3  \n'}
+[1.802556] (-) TimerEvent: {}
+[1.902776] (-) TimerEvent: {}
+[2.002996] (-) TimerEvent: {}
+[2.046952] (zit6_interfaces) StdoutLine: {'line': b'-- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter Development NumPy Development.Module Development.Embed \n'}
+[2.088283] (zit6_interfaces) StdoutLine: {'line': b'-- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter \n'}
+[2.102521] (zit6_interfaces) StdoutLine: {'line': b'-- Configuring done (2.1s)\n'}
+[2.103068] (-) TimerEvent: {}
+[2.128838] (zit6_interfaces) StdoutLine: {'line': b'-- Generating done (0.0s)\n'}
+[2.135928] (zit6_interfaces) StdoutLine: {'line': b'-- Build files have been written to: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build/zit6_interfaces\n'}
+[2.142889] (zit6_interfaces) CommandEnded: {'returncode': 0}
+[2.143237] (zit6_interfaces) JobProgress: {'identifier': 'zit6_interfaces', 'progress': 'build'}
+[2.143834] (zit6_interfaces) Command: {'cmd': ['/usr/bin/cmake', '--build', '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build/zit6_interfaces', '--', '-j32', '-l32'], 'cwd': '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build/zit6_interfaces', 'env': OrderedDict({'SUDO_GID': '1000', 'MAIL': '/var/mail/root', 'USER': 'root', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/opt/ros/jazzy/opt/rviz_ogre_vendor/lib:/opt/ros/jazzy/lib/x86_64-linux-gnu:/opt/ros/jazzy/opt/gz_math_vendor/lib:/opt/ros/jazzy/opt/gz_utils_vendor/lib:/opt/ros/jazzy/opt/gz_cmake_vendor/lib:/opt/ros/jazzy/lib', 'HOME': '/root', 'ROS_PYTHON_VERSION': '3', 'COLORTERM': 'truecolor', 'SUDO_UID': '1000', 'ROS_DISTRO': 'jazzy', 'GTK_IM_MODULE': 'fcitx5', 'LOGNAME': 'root', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'TERM': 'xterm-256color', 'PATH': '/opt/ros/jazzy/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin', 'DISPLAY': ':1', 'LANG': 'zh_CN.UTF-8', 'XDG_CURRENT_DESKTOP': 'ubuntu:GNOME', 'XMODIFIERS': '@im=fcitx5', 'XAUTHORITY': '/run/user/1000/gdm/Xauthority', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=00:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.avif=01;35:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:*~=00;90:*#=00;90:*.bak=00;90:*.crdownload=00;90:*.dpkg-dist=00;90:*.dpkg-new=00;90:*.dpkg-old=00;90:*.dpkg-tmp=00;90:*.old=00;90:*.orig=00;90:*.part=00;90:*.rej=00;90:*.rpmnew=00;90:*.rpmorig=00;90:*.rpmsave=00;90:*.swp=00;90:*.tmp=00;90:*.ucf-dist=00;90:*.ucf-new=00;90:*.ucf-old=00;90:', 'SUDO_COMMAND': './build_lib.sh', 'AMENT_PREFIX_PATH': '/opt/ros/jazzy', 'SHELL': '/bin/bash', 'SUDO_USER': 'doc049', 'ROS_AUTOMATIC_DISCOVERY_RANGE': 'SUBNET', 'QT_IM_MODULE': 'fcitx5', 'PWD': '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build/zit6_interfaces', 'PYTHONPATH': '/opt/ros/jazzy/lib/python3.12/site-packages', 'COLCON': '1', 'CMAKE_PREFIX_PATH': '/opt/ros/jazzy/opt/gz_math_vendor:/opt/ros/jazzy/opt/gz_utils_vendor:/opt/ros/jazzy/opt/gz_cmake_vendor:/opt/ros/jazzy'}), 'shell': False}
+[2.178359] (zit6_interfaces) StdoutLine: {'line': b'[  2%] \x1b[34m\x1b[1mGenerating Rust code for ROS interfaces\x1b[0m\n'}
+[2.179370] (zit6_interfaces) StdoutLine: {'line': b'[  4%] \x1b[34m\x1b[1mGenerating type hashes for ROS interfaces\x1b[0m\n'}
+[2.183448] (zit6_interfaces) StdoutLine: {'line': b'[  4%] Built target ament_cmake_python_symlink_zit6_interfaces\n'}
+[2.203164] (-) TimerEvent: {}
+[2.303345] (-) TimerEvent: {}
+[2.308153] (zit6_interfaces) StdoutLine: {'line': b'[  4%] Built target zit6_interfaces__rosidl_generator_type_description\n'}
+[2.315124] (zit6_interfaces) StdoutLine: {'line': b'running egg_info\n'}
+[2.315926] (zit6_interfaces) StdoutLine: {'line': b'creating zit6_interfaces.egg-info\n'}
+[2.316631] (zit6_interfaces) StdoutLine: {'line': b'[  6%] \x1b[34m\x1b[1mGenerating C code for ROS interfaces\x1b[0m\n'}
+[2.322905] (zit6_interfaces) StdoutLine: {'line': b'[  6%] Built target zit6_interfaces__rs\n'}
+[2.324611] (zit6_interfaces) StdoutLine: {'line': b'[  8%] \x1b[34m\x1b[1mGenerating C++ code for ROS interfaces\x1b[0m\n'}
+[2.326328] (zit6_interfaces) StdoutLine: {'line': b'writing zit6_interfaces.egg-info/PKG-INFO\n'}
+[2.326472] (zit6_interfaces) StdoutLine: {'line': b'writing dependency_links to zit6_interfaces.egg-info/dependency_links.txt\n'}
+[2.326577] (zit6_interfaces) StdoutLine: {'line': b'writing top-level names to zit6_interfaces.egg-info/top_level.txt\n'}
+[2.326684] (zit6_interfaces) StdoutLine: {'line': b"writing manifest file 'zit6_interfaces.egg-info/SOURCES.txt'\n"}
+[2.356627] (zit6_interfaces) StdoutLine: {'line': b"reading manifest file 'zit6_interfaces.egg-info/SOURCES.txt'\n"}
+[2.356955] (zit6_interfaces) StdoutLine: {'line': b"writing manifest file 'zit6_interfaces.egg-info/SOURCES.txt'\n"}
+[2.376439] (zit6_interfaces) StdoutLine: {'line': b'[  8%] Built target ament_cmake_python_build_zit6_interfaces_egg\n'}
+[2.403438] (-) TimerEvent: {}
+[2.486300] (zit6_interfaces) StdoutLine: {'line': b'[  8%] Built target zit6_interfaces__cpp\n'}
+[2.503539] (-) TimerEvent: {}
+[2.504560] (zit6_interfaces) StdoutLine: {'line': b'[ 20%] \x1b[32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_generator_c.dir/rosidl_generator_c/zit6_interfaces/msg/detail/zit_status__description.c.o\x1b[0m\n'}
+[2.504681] (zit6_interfaces) StdoutLine: {'line': b'[ 20%] \x1b[32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_generator_c.dir/rosidl_generator_c/zit6_interfaces/msg/detail/zit_setpoint__description.c.o\x1b[0m\n'}
+[2.504751] (zit6_interfaces) StdoutLine: {'line': b'[ 20%] \x1b[32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_generator_c.dir/rosidl_generator_c/zit6_interfaces/msg/detail/zit_setpoint__type_support.c.o\x1b[0m\n'}
+[2.504816] (zit6_interfaces) StdoutLine: {'line': b'[ 20%] \x1b[32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_generator_c.dir/rosidl_generator_c/zit6_interfaces/msg/detail/zit_setpoint__functions.c.o\x1b[0m\n'}
+[2.504878] (zit6_interfaces) StdoutLine: {'line': b'[ 20%] \x1b[32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_generator_c.dir/rosidl_generator_c/zit6_interfaces/msg/detail/zit_status__functions.c.o\x1b[0m\n'}
+[2.504960] (zit6_interfaces) StdoutLine: {'line': b'[ 22%] \x1b[32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_generator_c.dir/rosidl_generator_c/zit6_interfaces/msg/detail/zit_status__type_support.c.o\x1b[0m\n'}
+[2.540819] (zit6_interfaces) StdoutLine: {'line': b'[ 24%] \x1b[32m\x1b[1mLinking C shared library libzit6_interfaces__rosidl_generator_c.so\x1b[0m\n'}
+[2.571995] (zit6_interfaces) StdoutLine: {'line': b'[ 24%] Built target zit6_interfaces__rosidl_generator_c\n'}
+[2.579919] (zit6_interfaces) StdoutLine: {'line': b'[ 28%] \x1b[34m\x1b[1mGenerating C++ type support for eProsima Fast-RTPS\x1b[0m\n'}
+[2.580053] (zit6_interfaces) StdoutLine: {'line': b'[ 28%] \x1b[34m\x1b[1mGenerating C++ type support dispatch for ROS interfaces\x1b[0m\n'}
+[2.580457] (zit6_interfaces) StdoutLine: {'line': b'[ 37%] \x1b[34m\x1b[1mGenerating C++ introspection for ROS interfaces\x1b[0m\n'}
+[2.580524] (zit6_interfaces) StdoutLine: {'line': b'[ 37%] \x1b[34m\x1b[1mGenerating C type support dispatch for ROS interfaces\x1b[0m\n'}
+[2.580583] (zit6_interfaces) StdoutLine: {'line': b'[ 37%] \x1b[34m\x1b[1mGenerating C introspection for ROS interfaces\x1b[0m\n'}
+[2.580651] (zit6_interfaces) StdoutLine: {'line': b'[ 37%] \x1b[34m\x1b[1mGenerating C type support for eProsima Fast-RTPS\x1b[0m\n'}
+[2.603622] (-) TimerEvent: {}
+[2.703776] (-) TimerEvent: {}
+[2.743223] (zit6_interfaces) StdoutLine: {'line': b'[ 40%] \x1b[32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/zit6_interfaces/msg/zit_setpoint__type_support.cpp.o\x1b[0m\n'}
+[2.743751] (zit6_interfaces) StdoutLine: {'line': b'[ 44%] \x1b[32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/zit6_interfaces/msg/zit_setpoint__type_support.cpp.o\x1b[0m\n'}
+[2.743875] (zit6_interfaces) StdoutLine: {'line': b'[ 44%] \x1b[32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/zit6_interfaces/msg/zit_status__type_support.cpp.o\x1b[0m\n'}
+[2.744535] (zit6_interfaces) StdoutLine: {'line': b'[ 46%] \x1b[32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/zit6_interfaces/msg/zit_status__type_support.cpp.o\x1b[0m\n'}
+[2.753026] (zit6_interfaces) StdoutLine: {'line': b'[ 48%] \x1b[32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/zit6_interfaces/msg/detail/zit_setpoint__type_support.cpp.o\x1b[0m\n'}
+[2.753316] (zit6_interfaces) StdoutLine: {'line': b'[ 51%] \x1b[32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/zit6_interfaces/msg/detail/zit_status__type_support.cpp.o\x1b[0m\n'}
+[2.755914] (zit6_interfaces) StdoutLine: {'line': b'[ 53%] \x1b[32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/zit6_interfaces/msg/detail/zit_setpoint__type_support.c.o\x1b[0m\n'}
+[2.758239] (zit6_interfaces) StdoutLine: {'line': b'[ 55%] \x1b[32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/zit6_interfaces/msg/detail/zit_status__type_support.c.o\x1b[0m\n'}
+[2.774233] (zit6_interfaces) StdoutLine: {'line': b'[ 57%] \x1b[32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/zit6_interfaces/msg/detail/zit_setpoint__type_support_c.cpp.o\x1b[0m\n'}
+[2.774684] (zit6_interfaces) StdoutLine: {'line': b'[ 60%] \x1b[32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/zit6_interfaces/msg/detail/dds_fastrtps/zit_status__type_support.cpp.o\x1b[0m\n'}
+[2.774833] (zit6_interfaces) StdoutLine: {'line': b'[ 62%] \x1b[32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/zit6_interfaces/msg/detail/dds_fastrtps/zit_setpoint__type_support.cpp.o\x1b[0m\n'}
+[2.775046] (zit6_interfaces) StdoutLine: {'line': b'[ 64%] \x1b[32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/zit6_interfaces/msg/detail/zit_status__type_support_c.cpp.o\x1b[0m\n'}
+[2.777049] (zit6_interfaces) StdoutLine: {'line': b'[ 66%] \x1b[32m\x1b[1mLinking CXX shared library libzit6_interfaces__rosidl_typesupport_c.so\x1b[0m\n'}
+[2.789090] (zit6_interfaces) StdoutLine: {'line': b'[ 68%] \x1b[32m\x1b[1mLinking C shared library libzit6_interfaces__rosidl_typesupport_introspection_c.so\x1b[0m\n'}
+[2.803861] (-) TimerEvent: {}
+[2.810439] (zit6_interfaces) StdoutLine: {'line': b'[ 68%] Built target zit6_interfaces__rosidl_typesupport_c\n'}
+[2.816404] (zit6_interfaces) StdoutLine: {'line': b'[ 68%] Built target zit6_interfaces__rosidl_typesupport_introspection_c\n'}
+[2.904012] (-) TimerEvent: {}
+[2.965137] (zit6_interfaces) StdoutLine: {'line': b'[ 71%] \x1b[32m\x1b[1mLinking CXX shared library libzit6_interfaces__rosidl_typesupport_cpp.so\x1b[0m\n'}
+[2.974713] (zit6_interfaces) StdoutLine: {'line': b'[ 73%] \x1b[32m\x1b[1mLinking CXX shared library libzit6_interfaces__rosidl_typesupport_introspection_cpp.so\x1b[0m\n'}
+[3.001439] (zit6_interfaces) StdoutLine: {'line': b'[ 73%] Built target zit6_interfaces__rosidl_typesupport_cpp\n'}
+[3.004110] (-) TimerEvent: {}
+[3.035042] (zit6_interfaces) StdoutLine: {'line': b'[ 73%] Built target zit6_interfaces__rosidl_typesupport_introspection_cpp\n'}
+[3.110445] (-) TimerEvent: {}
+[3.163623] (zit6_interfaces) StdoutLine: {'line': b'[ 75%] \x1b[32m\x1b[1mLinking CXX shared library libzit6_interfaces__rosidl_typesupport_fastrtps_c.so\x1b[0m\n'}
+[3.170185] (zit6_interfaces) StdoutLine: {'line': b'[ 77%] \x1b[32m\x1b[1mLinking CXX shared library libzit6_interfaces__rosidl_typesupport_fastrtps_cpp.so\x1b[0m\n'}
+[3.199191] (zit6_interfaces) StdoutLine: {'line': b'[ 77%] Built target zit6_interfaces__rosidl_typesupport_fastrtps_c\n'}
+[3.210443] (-) TimerEvent: {}
+[3.218354] (zit6_interfaces) StdoutLine: {'line': b'[ 77%] Built target zit6_interfaces__rosidl_typesupport_fastrtps_cpp\n'}
+[3.238376] (zit6_interfaces) StdoutLine: {'line': b'[ 77%] Built target zit6_interfaces\n'}
+[3.252789] (zit6_interfaces) StdoutLine: {'line': b'[ 80%] \x1b[34m\x1b[1mGenerating Python code for ROS interfaces\x1b[0m\n'}
+[3.310543] (-) TimerEvent: {}
+[3.410734] (-) TimerEvent: {}
+[3.455011] (zit6_interfaces) StdoutLine: {'line': b'[ 80%] Built target zit6_interfaces__py\n'}
+[3.467700] (zit6_interfaces) StdoutLine: {'line': b'[ 82%] \x1b[32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_generator_py.dir/rosidl_generator_py/zit6_interfaces/msg/_zit_setpoint_s.c.o\x1b[0m\n'}
+[3.468029] (zit6_interfaces) StdoutLine: {'line': b'[ 84%] \x1b[32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_generator_py.dir/rosidl_generator_py/zit6_interfaces/msg/_zit_status_s.c.o\x1b[0m\n'}
+[3.510829] (-) TimerEvent: {}
+[3.564558] (zit6_interfaces) StdoutLine: {'line': b'[ 86%] \x1b[32m\x1b[1mLinking C shared library libzit6_interfaces__rosidl_generator_py.so\x1b[0m\n'}
+[3.590394] (zit6_interfaces) StdoutLine: {'line': b'[ 86%] Built target zit6_interfaces__rosidl_generator_py\n'}
+[3.604843] (zit6_interfaces) StdoutLine: {'line': b'[ 93%] \x1b[32mBuilding C object CMakeFiles/zit6_interfaces_s__rosidl_typesupport_c.dir/rosidl_generator_py/zit6_interfaces/_zit6_interfaces_s.ep.rosidl_typesupport_c.c.o\x1b[0m\n'}
+[3.605034] (zit6_interfaces) StdoutLine: {'line': b'[ 93%] \x1b[32mBuilding C object CMakeFiles/zit6_interfaces_s__rosidl_typesupport_fastrtps_c.dir/rosidl_generator_py/zit6_interfaces/_zit6_interfaces_s.ep.rosidl_typesupport_fastrtps_c.c.o\x1b[0m\n'}
+[3.605106] (zit6_interfaces) StdoutLine: {'line': b'[ 93%] \x1b[32mBuilding C object CMakeFiles/zit6_interfaces_s__rosidl_typesupport_introspection_c.dir/rosidl_generator_py/zit6_interfaces/_zit6_interfaces_s.ep.rosidl_typesupport_introspection_c.c.o\x1b[0m\n'}
+[3.610924] (-) TimerEvent: {}
+[3.672338] (zit6_interfaces) StdoutLine: {'line': b'[ 97%] \x1b[32m\x1b[1mLinking C shared module rosidl_generator_py/zit6_interfaces/zit6_interfaces_s__rosidl_typesupport_introspection_c.so\x1b[0m\n'}
+[3.672529] (zit6_interfaces) StdoutLine: {'line': b'[ 97%] \x1b[32m\x1b[1mLinking C shared module rosidl_generator_py/zit6_interfaces/zit6_interfaces_s__rosidl_typesupport_c.so\x1b[0m\n'}
+[3.672660] (zit6_interfaces) StdoutLine: {'line': b'[100%] \x1b[32m\x1b[1mLinking C shared module rosidl_generator_py/zit6_interfaces/zit6_interfaces_s__rosidl_typesupport_fastrtps_c.so\x1b[0m\n'}
+[3.692716] (zit6_interfaces) StdoutLine: {'line': b'[100%] Built target zit6_interfaces_s__rosidl_typesupport_introspection_c\n'}
+[3.692924] (zit6_interfaces) StdoutLine: {'line': b'[100%] Built target zit6_interfaces_s__rosidl_typesupport_c\n'}
+[3.693025] (zit6_interfaces) StdoutLine: {'line': b'[100%] Built target zit6_interfaces_s__rosidl_typesupport_fastrtps_c\n'}
+[3.701364] (zit6_interfaces) CommandEnded: {'returncode': 0}
+[3.701843] (zit6_interfaces) JobProgress: {'identifier': 'zit6_interfaces', 'progress': 'install'}
+[3.707362] (zit6_interfaces) Command: {'cmd': ['/usr/bin/cmake', '--install', '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build/zit6_interfaces'], 'cwd': '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build/zit6_interfaces', 'env': OrderedDict({'SUDO_GID': '1000', 'MAIL': '/var/mail/root', 'USER': 'root', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/opt/ros/jazzy/opt/rviz_ogre_vendor/lib:/opt/ros/jazzy/lib/x86_64-linux-gnu:/opt/ros/jazzy/opt/gz_math_vendor/lib:/opt/ros/jazzy/opt/gz_utils_vendor/lib:/opt/ros/jazzy/opt/gz_cmake_vendor/lib:/opt/ros/jazzy/lib', 'HOME': '/root', 'ROS_PYTHON_VERSION': '3', 'COLORTERM': 'truecolor', 'SUDO_UID': '1000', 'ROS_DISTRO': 'jazzy', 'GTK_IM_MODULE': 'fcitx5', 'LOGNAME': 'root', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'TERM': 'xterm-256color', 'PATH': '/opt/ros/jazzy/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin', 'DISPLAY': ':1', 'LANG': 'zh_CN.UTF-8', 'XDG_CURRENT_DESKTOP': 'ubuntu:GNOME', 'XMODIFIERS': '@im=fcitx5', 'XAUTHORITY': '/run/user/1000/gdm/Xauthority', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=00:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.avif=01;35:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:*~=00;90:*#=00;90:*.bak=00;90:*.crdownload=00;90:*.dpkg-dist=00;90:*.dpkg-new=00;90:*.dpkg-old=00;90:*.dpkg-tmp=00;90:*.old=00;90:*.orig=00;90:*.part=00;90:*.rej=00;90:*.rpmnew=00;90:*.rpmorig=00;90:*.rpmsave=00;90:*.swp=00;90:*.tmp=00;90:*.ucf-dist=00;90:*.ucf-new=00;90:*.ucf-old=00;90:', 'SUDO_COMMAND': './build_lib.sh', 'AMENT_PREFIX_PATH': '/opt/ros/jazzy', 'SHELL': '/bin/bash', 'SUDO_USER': 'doc049', 'ROS_AUTOMATIC_DISCOVERY_RANGE': 'SUBNET', 'QT_IM_MODULE': 'fcitx5', 'PWD': '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build/zit6_interfaces', 'PYTHONPATH': '/opt/ros/jazzy/lib/python3.12/site-packages', 'COLCON': '1', 'CMAKE_PREFIX_PATH': '/opt/ros/jazzy/opt/gz_math_vendor:/opt/ros/jazzy/opt/gz_utils_vendor:/opt/ros/jazzy/opt/gz_cmake_vendor:/opt/ros/jazzy'}), 'shell': False}
+[3.711003] (-) TimerEvent: {}
+[3.712184] (zit6_interfaces) StdoutLine: {'line': b'-- Install configuration: ""\n'}
+[3.712711] (zit6_interfaces) StdoutLine: {'line': b'-- Execute custom install script\n'}
+[3.712901] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/ament_index/resource_index/rosidl_interfaces/zit6_interfaces\n'}
+[3.718638] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/msg/ZitSetpoint.json\n'}
+[3.726231] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/msg/ZitStatus.json\n'}
+[3.733101] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_setpoint__functions.h\n'}
+[3.738862] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_setpoint__struct.h\n'}
+[3.744761] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_setpoint__type_support.h\n'}
+[3.750010] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_status__functions.h\n'}
+[3.756472] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_status__struct.h\n'}
+[3.762150] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_status__type_support.h\n'}
+[3.768310] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/rosidl_generator_c__visibility_control.h\n'}
+[3.773562] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/zit_setpoint.h\n'}
+[3.778748] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/zit_status.h\n'}
+[3.784012] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/environment/library_path.sh\n'}
+[3.789854] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/environment/library_path.dsv\n'}
+[3.796006] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_setpoint__rosidl_typesupport_fastrtps_c.h\n'}
+[3.801491] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_status__rosidl_typesupport_fastrtps_c.h\n'}
+[3.807453] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/rosidl_typesupport_fastrtps_c__visibility_control.h\n'}
+[3.811077] (-) TimerEvent: {}
+[3.813566] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_setpoint__rosidl_typesupport_introspection_c.h\n'}
+[3.819239] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_status__rosidl_typesupport_introspection_c.h\n'}
+[3.826598] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/rosidl_typesupport_introspection_c__visibility_control.h\n'}
+[3.833499] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_setpoint__builder.hpp\n'}
+[3.839378] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_setpoint__struct.hpp\n'}
+[3.844830] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_setpoint__traits.hpp\n'}
+[3.850666] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_setpoint__type_support.hpp\n'}
+[3.856303] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_status__builder.hpp\n'}
+[3.861628] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_status__struct.hpp\n'}
+[3.866835] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_status__traits.hpp\n'}
+[3.871966] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_status__type_support.hpp\n'}
+[3.877011] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/rosidl_generator_cpp__visibility_control.hpp\n'}
+[3.882095] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/zit_setpoint.hpp\n'}
+[3.887211] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/zit_status.hpp\n'}
+[3.892625] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_setpoint__rosidl_typesupport_fastrtps_cpp.hpp\n'}
+[3.898334] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_status__rosidl_typesupport_fastrtps_cpp.hpp\n'}
+[3.903490] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/rosidl_typesupport_fastrtps_cpp__visibility_control.h\n'}
+[3.909831] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_setpoint__rosidl_typesupport_introspection_cpp.hpp\n'}
+[3.911155] (-) TimerEvent: {}
+[3.915327] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_status__rosidl_typesupport_introspection_cpp.hpp\n'}
+[3.921789] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/environment/pythonpath.sh\n'}
+[3.929248] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/environment/pythonpath.dsv\n'}
+[3.935492] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces-0.0.1-py3.12.egg-info/PKG-INFO\n'}
+[3.941445] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces-0.0.1-py3.12.egg-info/SOURCES.txt\n'}
+[3.946979] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces-0.0.1-py3.12.egg-info/dependency_links.txt\n'}
+[3.952890] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces-0.0.1-py3.12.egg-info/top_level.txt\n'}
+[3.958841] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/__init__.py\n'}
+[3.964705] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/_zit6_interfaces_s.ep.rosidl_typesupport_c.c\n'}
+[3.970375] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/_zit6_interfaces_s.ep.rosidl_typesupport_fastrtps_c.c\n'}
+[3.975518] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/_zit6_interfaces_s.ep.rosidl_typesupport_introspection_c.c\n'}
+[3.980874] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/msg/__init__.py\n'}
+[3.986971] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/msg/_zit_setpoint.py\n'}
+[3.992623] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/msg/_zit_setpoint_s.c\n'}
+[3.997781] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/msg/_zit_status.py\n'}
+[4.004101] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/msg/_zit_status_s.c\n'}
+[4.009911] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/zit6_interfaces_s__rosidl_typesupport_c.so\n'}
+[4.011235] (-) TimerEvent: {}
+[4.017421] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/zit6_interfaces_s__rosidl_typesupport_fastrtps_c.so\n'}
+[4.022710] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/zit6_interfaces_s__rosidl_typesupport_introspection_c.so\n'}
+[4.031658] (zit6_interfaces) StdoutLine: {'line': b'-- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/zit6_interfaces_s__rosidl_typesupport_fastrtps_c.so\n'}
+[4.031822] (zit6_interfaces) StdoutLine: {'line': b'-- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/zit6_interfaces_s__rosidl_typesupport_introspection_c.so\n'}
+[4.031971] (zit6_interfaces) StdoutLine: {'line': b'-- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/zit6_interfaces_s__rosidl_typesupport_c.so\n'}
+[4.032069] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/ament_index/resource_index/rust_packages/zit6_interfaces\n'}
+[4.038045] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/rust/Cargo.toml\n'}
+[4.044039] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/rust/build.rs\n'}
+[4.050113] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/rust/src/lib.rs\n'}
+[4.055741] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/rust/src/msg.rs\n'}
+[4.060995] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/rust/src/msg/rmw.rs\n'}
+[4.066907] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/msg/ZitSetpoint.idl\n'}
+[4.072861] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/msg/ZitStatus.idl\n'}
+[4.078157] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/msg/ZitSetpoint.msg\n'}
+[4.084010] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/msg/ZitStatus.msg\n'}
+[4.089514] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/ament_index/resource_index/package_run_dependencies/zit6_interfaces\n'}
+[4.095484] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/ament_index/resource_index/parent_prefix_path/zit6_interfaces\n'}
+[4.100939] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/environment/ament_prefix_path.sh\n'}
+[4.106950] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/environment/ament_prefix_path.dsv\n'}
+[4.111341] (-) TimerEvent: {}
+[4.113132] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/environment/path.sh\n'}
+[4.118777] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/environment/path.dsv\n'}
+[4.127131] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/local_setup.bash\n'}
+[4.134334] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/local_setup.sh\n'}
+[4.140779] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/local_setup.zsh\n'}
+[4.146711] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/local_setup.dsv\n'}
+[4.152041] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/package.dsv\n'}
+[4.157182] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/ament_index/resource_index/packages/zit6_interfaces\n'}
+[4.162579] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/rosidl_cmake-extras.cmake\n'}
+[4.168408] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/ament_cmake_export_include_directories-extras.cmake\n'}
+[4.175122] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/ament_cmake_export_libraries-extras.cmake\n'}
+[4.180717] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/ament_cmake_export_targets-extras.cmake\n'}
+[4.186815] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/rosidl_cmake_export_typesupport_targets-extras.cmake\n'}
+[4.192782] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/ament_cmake_export_dependencies-extras.cmake\n'}
+[4.198205] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/rosidl_cmake_export_typesupport_libraries-extras.cmake\n'}
+[4.204214] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/zit6_interfacesConfig.cmake\n'}
+[4.209968] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/zit6_interfacesConfig-version.cmake\n'}
+[4.211426] (-) TimerEvent: {}
+[4.216245] (zit6_interfaces) StdoutLine: {'line': b'-- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/package.xml\n'}
+[4.224687] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_generator_c.so\n'}
+[4.225162] (zit6_interfaces) StdoutLine: {'line': b'-- Set non-toolchain portion of runtime path of "/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_generator_c.so" to ""\n'}
+[4.225310] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_typesupport_fastrtps_c.so\n'}
+[4.225840] (zit6_interfaces) StdoutLine: {'line': b'-- Set non-toolchain portion of runtime path of "/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_typesupport_fastrtps_c.so" to ""\n'}
+[4.225969] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_typesupport_introspection_c.so\n'}
+[4.226373] (zit6_interfaces) StdoutLine: {'line': b'-- Set non-toolchain portion of runtime path of "/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_typesupport_introspection_c.so" to ""\n'}
+[4.226520] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_typesupport_c.so\n'}
+[4.226874] (zit6_interfaces) StdoutLine: {'line': b'-- Set non-toolchain portion of runtime path of "/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_typesupport_c.so" to ""\n'}
+[4.227015] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_typesupport_fastrtps_cpp.so\n'}
+[4.227535] (zit6_interfaces) StdoutLine: {'line': b'-- Set non-toolchain portion of runtime path of "/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_typesupport_fastrtps_cpp.so" to ""\n'}
+[4.227838] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_typesupport_introspection_cpp.so\n'}
+[4.228256] (zit6_interfaces) StdoutLine: {'line': b'-- Set non-toolchain portion of runtime path of "/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_typesupport_introspection_cpp.so" to ""\n'}
+[4.228402] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_typesupport_cpp.so\n'}
+[4.228800] (zit6_interfaces) StdoutLine: {'line': b'-- Set non-toolchain portion of runtime path of "/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_typesupport_cpp.so" to ""\n'}
+[4.257528] (zit6_interfaces) StdoutLine: {'line': b"Listing '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces'...\n"}
+[4.257676] (zit6_interfaces) StdoutLine: {'line': b"Compiling '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/__init__.py'...\n"}
+[4.257740] (zit6_interfaces) StdoutLine: {'line': b"Listing '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/msg'...\n"}
+[4.257799] (zit6_interfaces) StdoutLine: {'line': b"Compiling '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/msg/__init__.py'...\n"}
+[4.257855] (zit6_interfaces) StdoutLine: {'line': b"Compiling '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/msg/_zit_setpoint.py'...\n"}
+[4.257911] (zit6_interfaces) StdoutLine: {'line': b"Compiling '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/msg/_zit_status.py'...\n"}
+[4.261089] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_generator_py.so\n'}
+[4.261489] (zit6_interfaces) StdoutLine: {'line': b'-- Set non-toolchain portion of runtime path of "/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_generator_py.so" to ""\n'}
+[4.261603] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/export_zit6_interfaces__rosidl_generator_cExport.cmake\n'}
+[4.261732] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/export_zit6_interfaces__rosidl_generator_cExport-noconfig.cmake\n'}
+[4.261871] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/export_zit6_interfaces__rosidl_typesupport_fastrtps_cExport.cmake\n'}
+[4.262006] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/export_zit6_interfaces__rosidl_typesupport_fastrtps_cExport-noconfig.cmake\n'}
+[4.262164] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/zit6_interfaces__rosidl_typesupport_introspection_cExport.cmake\n'}
+[4.262292] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/zit6_interfaces__rosidl_typesupport_introspection_cExport-noconfig.cmake\n'}
+[4.262469] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/zit6_interfaces__rosidl_typesupport_cExport.cmake\n'}
+[4.262602] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/zit6_interfaces__rosidl_typesupport_cExport-noconfig.cmake\n'}
+[4.262754] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/export_zit6_interfaces__rosidl_generator_cppExport.cmake\n'}
+[4.262918] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/export_zit6_interfaces__rosidl_typesupport_fastrtps_cppExport.cmake\n'}
+[4.263058] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/export_zit6_interfaces__rosidl_typesupport_fastrtps_cppExport-noconfig.cmake\n'}
+[4.263221] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/zit6_interfaces__rosidl_typesupport_introspection_cppExport.cmake\n'}
+[4.263345] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/zit6_interfaces__rosidl_typesupport_introspection_cppExport-noconfig.cmake\n'}
+[4.263529] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/zit6_interfaces__rosidl_typesupport_cppExport.cmake\n'}
+[4.263653] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/zit6_interfaces__rosidl_typesupport_cppExport-noconfig.cmake\n'}
+[4.263813] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/export_zit6_interfaces__rosidl_generator_pyExport.cmake\n'}
+[4.263935] (zit6_interfaces) StdoutLine: {'line': b'-- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/export_zit6_interfaces__rosidl_generator_pyExport-noconfig.cmake\n'}
+[4.265909] (zit6_interfaces) CommandEnded: {'returncode': 0}
+[4.285476] (zit6_interfaces) JobEnded: {'identifier': 'zit6_interfaces', 'rc': 0}
+[4.286184] (-) EventReactorShutdown: {}

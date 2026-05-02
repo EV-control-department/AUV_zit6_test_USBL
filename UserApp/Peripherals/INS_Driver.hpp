@@ -1,17 +1,6 @@
 /**
  * @file INS_Driver.hpp
  * @brief NAV-300 集成惯导驱动类
- *
- * 职责：
- * 1. 通过串口（UART+DMA）接收并解析 NAV-300 的 100Hz 导航数据包。
- * 2. 按照“室外 GPS/SINS/DVL”模式协议提取位姿、速度及传感器状态。
- * 3. 向上层提供线程安全的 NavState 访问接口。
- * 4. 封装控制指令（DVL电源、位置清零、系统重启）。
- *
- * 协议参考 (UNAV-IP Series)：
- * - 帧头：0x55 0xAA (2 bytes)
- * - 长度：117 bytes (固定)
- * - 校验：双字节累加和 (CK1, CK2)
  */
 
 #ifndef __INS_DRIVER_HPP
@@ -19,7 +8,8 @@
 
 #include "SerialPort.hpp"
 #include "CommonConfig.hpp"
-#include <string.h>
+#include <cstdint>
+#include <cstring>
 
 namespace auv {
 
@@ -37,58 +27,51 @@ public:
     INS_Driver(UART_HandleTypeDef* rx_uart, UART_HandleTypeDef* tx_uart)
         : rx_port_(rx_uart, 512), tx_uart_(tx_uart) {}
 
-    /**
-     * @brief 初始化驱动，启动非阻塞接收
-     */
     void init();
+    bool update(NavState& state);
+    NavState getNavState() const { return state_; }
 
+    // --- 指令发送接口 ---
+    
     /**
-     * @brief 发送控制指令给惯导硬件
-     * @param cmd_id 指令ID（0x02:位置清零, 0x03:DVL电源, 0x04:重启）
-     * @param value 指令参数
+     * @brief 发送控制指令 (带 1 字节 value)
      */
     void sendCommand(uint8_t cmd_id, uint8_t value);
-
+    
     /**
-     * @brief 全局位置增量清零
+     * @brief 发送带多字节数据的控制指令
+     */
+    void sendCommand(uint8_t cmd_id, const uint8_t* data, uint8_t data_len);
+    
+    /**
+     * @brief 全局位置增量清零 (ID: 0x02)
      */
     void resetPosition();
 
     /**
-     * @brief 控制 DVL 模块电源状态
-     * @param on true 表示开启 DVL (0x01), false 表示关闭 (0x00)
+     * @brief 控制 DVL 模块电源状态 (ID: 0x03)
      */
     void setDvlPower(bool on);
 
     /**
-     * @brief 触发惯导系统重启
+     * @brief 触发惯导系统重启 (ID: 0x04)
      */
     void restart();
 
     /**
-     * @brief 驱动更新函数，建议在 100Hz+ 循环中调用
-    *
-     * 计算流程：
-     * 1. 从环形缓冲区读取原始字节。
-     * 2. 执行状态机解析（检测帧头、帧尾）。
-     * 3. 校验合格后解码数据并更新内部 state_ 副本。
-    *
-     * @param[out] state 输出解码后的导航状态
-     * @return true 表示成功解析到一个完整的新帧
+     * @brief 惯导初始位置装订 (ID: 0x20)
+     * @param lat 纬度 (度)
+     * @param lon 经度 (度)
      */
-    bool update(NavState& state);
-
-    /**
-     * @brief 获取最新解析到的导航状态快照
-     */
-    NavState getNavState() const { return state_; }
+    void setInitialPosition(double lat, double lon);
 
 private:
     SerialPort rx_port_;          ///< 串口接收驱动
     UART_HandleTypeDef* tx_uart_; ///< 指令发送串口句柄
+    uint32_t rx_total_bytes_ = 0; ///< 累计接收字节数（调试统计）
 
-    static constexpr uint16_t kMaxFrameSize = 128;
-    static constexpr uint16_t kMinFrameSize = 117;
+    static constexpr uint16_t kMaxFrameSize = 256;
+    static constexpr uint16_t kMinFrameSize = 133;
     uint8_t packet_buf_[kMaxFrameSize] = {0};      ///< 帧解析临时缓冲区
     uint16_t frame_len_ = 0;                       ///< 当前解析长度
 

@@ -78,6 +78,8 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
 )
 
 # Add project symbols (macros)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive -w")
+add_compile_options(-Wno-error -Wno-error=fpermissive -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast -Wno-unused-result -fpermissive)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined symbols
     DATA_IN_D2_SRAM
