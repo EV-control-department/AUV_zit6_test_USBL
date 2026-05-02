@@ -107,53 +107,38 @@ bool INS_Driver::validateFrame() {
 }
 
 void INS_Driver::decodePacket(NavState& s) {
-    NavState prev = state_;
-    float raw_data[12];
-    memcpy(&(raw_data[3]), packet_buf_ + 2, 12);   
-    memcpy(&(raw_data[0]), packet_buf_ + 54, 8);   
-    memcpy(&(raw_data[2]), packet_buf_ + 62, 4);   
+    const float kDeg2Rad = 0.0174532925f;
 
-    state_.y = raw_data[0];   
-    state_.x = -raw_data[1];  
-    state_.z = raw_data[2];   
-    state_.yaw = raw_data[5]; 
+    // 1. 姿态与角速度 (单位转换：度 -> 弧度)
+    float yaw_deg, wz_deg;
+    memcpy(&yaw_deg, packet_buf_ + 10, 4);
+    memcpy(&wz_deg, packet_buf_ + 22, 4);
+    
+    state_.yaw = yaw_deg * kDeg2Rad;
+    state_.vyaw = wz_deg * kDeg2Rad;
 
-    state_.imu_state = packet_buf_[129];       
-    state_.dvl_state = packet_buf_[115] >> 7;  
+    // 2. 机体系线速度 (直接从协议读取，无需微分)
+    // Offset 26: Vx (Surge), 30: Vy (Sway), 34: Vz (Heave)
+    memcpy(&state_.vx, packet_buf_ + 26, 4);
+    memcpy(&state_.vy, packet_buf_ + 30, 4);
+    memcpy(&state_.vz, packet_buf_ + 34, 4);
+
+    // 3. 位置信息
+    // Offset 103: 北向增量 (North -> X), 107: 东向增量 (East -> Y), 46: 深度 (Depth -> Z)
+    memcpy(&state_.x, packet_buf_ + 103, 4);
+    memcpy(&state_.y, packet_buf_ + 107, 4);
+    memcpy(&state_.z, packet_buf_ + 46, 4);
+
+    // 4. 状态位
+    // Offset 129: 导航模式 (imu_state)
+    state_.imu_state = packet_buf_[129];
+    
+    // Offset 115: 传感器状态。Bit 1 为 DVL 有效位 (Valid)
+    state_.dvl_state = (packet_buf_[115] & 0x02) ? 1 : 0;
+    
     state_.timestamp = HAL_GetTick();
 
-    if (has_prev_state_) {
-        uint32_t dt_ms = state_.timestamp - prev.timestamp;
-        if (dt_ms > 0) {
-            float dt = static_cast<float>(dt_ms) * 0.001f;
-            float world_dx = state_.x - prev.x;
-            float world_dy = state_.y - prev.y;
-            float world_dz = state_.z - prev.z;
-            float dyaw = state_.yaw - prev.yaw;
-
-            const float kPi = 3.1415926535f;
-            const float kTwoPi = 6.283185307f;
-            while (dyaw > kPi) dyaw -= kTwoPi;
-            while (dyaw < -kPi) dyaw += kTwoPi;
-
-            float cos_y = std::cos(state_.yaw);
-            float sin_y = std::sin(state_.yaw);
-            state_.vx = (world_dx * cos_y + world_dy * sin_y) / dt;
-            state_.vy = (-world_dx * sin_y + world_dy * cos_y) / dt;
-            state_.vz = world_dz / dt;
-            state_.vyaw = dyaw / dt;
-        }
-    } else {
-        state_.vx = 0.0f;
-        state_.vy = 0.0f;
-        state_.vz = 0.0f;
-        state_.vyaw = 0.0f;
-        has_prev_state_ = true;
-    }
-
-    prev_state_ = state_;
-
-    s = state_; // 同步
+    s = state_; // 同步输出
     frame_len_ = 0;
 }
 
