@@ -2,6 +2,7 @@
 #include "INS_Driver.hpp"
 #include "ChassisManager.hpp"
 #include "CommonConfig.hpp"
+#include "MotionController_Driver.hpp"
 #include "FreeRTOS.h"
 #include "task.h"
 #include <cmath>
@@ -44,6 +45,7 @@ extern "C" {
 extern "C" UART_HandleTypeDef huart7;
 extern "C" UART_HandleTypeDef huart3;
 extern "C" UART_HandleTypeDef huart2;
+extern "C" UART_HandleTypeDef huart6;
 
 // 全局状态与控制量
 static float target_p[4] = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -53,6 +55,7 @@ static uint32_t last_received_seq = 0;
 
 static auv::INS_Driver ins_driver(&huart7, &huart3);
 static auv::control::ChassisManager chassis;
+static auv::MotionController_Driver motor_driver(&huart6);
 
 // --- 安全 ARM 状态机变量 ---
 static bool is_system_armed = false;
@@ -242,7 +245,14 @@ void UserApp_ControlTask(void *argument) {
         auto forces = chassis.update(actual_p, actual_v, target_snapshot);
         taskENTER_CRITICAL();
         for(int i=0; i<4; i++) last_output_forces[i] = forces[i];
+        bool armed = is_system_armed;
         taskEXIT_CRITICAL();
+
+        if (armed) {
+            motor_driver.publishThrust(forces[0], forces[1], forces[2], forces[3]);
+        } else {
+            motor_driver.publishThrust(0, 0, 0, 0);
+        }
 
         vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(10));
     }

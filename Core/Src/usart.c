@@ -506,7 +506,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     */
     GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_InitStruct.Alternate = GPIO_AF7_USART6;
     HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
@@ -679,7 +679,22 @@ extern uint8_t dma_buffer[];
 
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
-  /* Error handling is now done by clearing ORE in USART2_IRQHandler */
+  /* 自动清除 UART 错误（如溢出 ORE、奇偶校验 PE 等），防止串口死锁 */
+  if (__HAL_UART_GET_FLAG(huart, UART_FLAG_ORE)) {
+      __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_OREF);
+  }
+  if (__HAL_UART_GET_FLAG(huart, UART_FLAG_NE)) {
+      __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_NEF);
+  }
+  if (__HAL_UART_GET_FLAG(huart, UART_FLAG_FE)) {
+      __HAL_UART_CLEAR_FLAG(huart, UART_CLEAR_FEF);
+  }
+  
+  /* 如果是 DMA 接收模式，出错后可能需要重启接收 */
+  if (huart->Instance == UART7 || huart->Instance == USART2) {
+      // 简单重启 DMA 接收
+      HAL_UART_Receive_DMA(huart, (uint8_t*)huart->pRxBuffPtr, huart->RxXferSize);
+  }
 }
 /* USER CODE END 1 */
 
