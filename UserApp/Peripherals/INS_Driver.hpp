@@ -8,10 +8,10 @@
  * 3. 向上层提供线程安全的 NavState 访问接口。
  * 4. 封装控制指令（DVL电源、位置清零、系统重启）。
  *
- * 协议参考：
- * - 帧头：0xFA 0xAF
- * - 帧尾：0xFB 0xBF
- * - 校验：异或校验 (XOR)
+ * 协议参考 (UNAV-IP Series)：
+ * - 帧头：0x55 0xAA (2 bytes)
+ * - 长度：117 bytes (固定)
+ * - 校验：双字节累加和 (CK1, CK2)
  */
 
 #ifndef __INS_DRIVER_HPP
@@ -87,8 +87,8 @@ private:
     SerialPort rx_port_;          ///< 串口接收驱动
     UART_HandleTypeDef* tx_uart_; ///< 指令发送串口句柄
 
-    static constexpr uint16_t kMaxFrameSize = 256;
-    static constexpr uint16_t kMinFrameSize = 132;
+    static constexpr uint16_t kMaxFrameSize = 128;
+    static constexpr uint16_t kMinFrameSize = 117;
     uint8_t packet_buf_[kMaxFrameSize] = {0};      ///< 帧解析临时缓冲区
     uint16_t frame_len_ = 0;                       ///< 当前解析长度
 

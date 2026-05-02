@@ -45,10 +45,6 @@ public:
         uint16_t bytes_to_read = 0;
 
         if (current_pos != last_rx_pos_) {
-            // STM32H7 必须处理 Cache 一致性：在读取 DMA 缓冲区前失效对应的 CPU 缓存
-            // 确保 CPU 从 SRAM 中读取到 DMA 写入的最新的数据包
-            SCB_InvalidateDCache_by_Addr((uint32_t*)rx_buffer_, rx_buf_size_);
-
             if (current_pos > last_rx_pos_) {
                 bytes_to_read = current_pos - last_rx_pos_;
                 if (bytes_to_read > max_len) bytes_to_read = max_len;
