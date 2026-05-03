@@ -44,6 +44,11 @@ public:
     void setConfig(const Config& config);
     
     /**
+     * @brief 获取当前配置参数
+     */
+    const Config& getConfig() const { return cfg_; }
+    
+    /**
      * @brief 执行一次 PID 计算
      * @param error 当前残差 (Setpoint - Actual)
      * @param dt 实际经过的时间步长 (秒)

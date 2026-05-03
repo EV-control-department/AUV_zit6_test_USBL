@@ -10,29 +10,47 @@ echo "========================================================="
 echo "   AUV Zit6 - Integrated Build Script"
 echo "========================================================="
 
-# 0. 准备工作
-echo "[0/3] Preparing environment..."
-# 仅清理库文件，不清理整个 build 目录（除非 build 目录损坏）
-sudo rm -rf micro_ros_stm32cubemx_utils/microros_static_library_ide/libmicroros
-
-# 同步接口定义 (解决 Docker 内部软链接失效问题)
+# 0. 准备工作与缓存检查
+echo "[0/3] Preparing environment & checking cache..."
 EXTRA_PKG_DIR="micro_ros_stm32cubemx_utils/microros_static_library_ide/library_generation/extra_packages"
-mkdir -p "$EXTRA_PKG_DIR"
-if [ -L "$EXTRA_PKG_DIR/zit6_interfaces" ]; then rm "$EXTRA_PKG_DIR/zit6_interfaces"; fi
-cp -rL zit6_interfaces "$EXTRA_PKG_DIR/"
+HASH_FILE=".msg_hash"
+LIB_FILE="micro_ros_stm32cubemx_utils/microros_static_library_ide/libmicroros/libmicroros.a"
 
-# 1. 生成 micro-ROS 静态库 (使用 Docker)
-echo "[1/3] Generating micro-ROS library via Docker..."
-# 恢复使用官方镜像以防本地镜像有问题
-docker run --rm --network host --name microros_builder \
-  -v "${PROJECT_ROOT}:/project" \
-  --env MICROROS_LIBRARY_FOLDER=micro_ros_stm32cubemx_utils/microros_static_library_ide \
-  --env http_proxy=http://127.0.0.1:7897 \
-  --env https_proxy=http://127.0.0.1:7897 \
-  --env all_proxy=socks5://127.0.0.1:7897 \
-  microros/micro_ros_static_library_builder:humble
+# 计算当前接口定义的哈希值
+CURRENT_HASH=$(find zit6_interfaces -type f -exec md5sum {} + | sort | md5sum | awk '{print $1}')
+OLD_HASH=""
+if [ -f "$HASH_FILE" ]; then OLD_HASH=$(cat "$HASH_FILE"); fi
 
-echo ">>> micro-ROS library generation finished."
+# 检查是否需要重新生成库
+NEED_REBUILD=true
+if [ "$CURRENT_HASH" == "$OLD_HASH" ] && [ -f "$LIB_FILE" ]; then
+    echo ">>> Interfaces haven't changed. Skipping micro-ROS library generation."
+    NEED_REBUILD=false
+else
+    echo ">>> Interfaces changed or library missing. Rebuilding..."
+fi
+
+if [ "$NEED_REBUILD" = true ]; then
+    # 仅在真正需要时清理和同步
+    sudo rm -rf micro_ros_stm32cubemx_utils/microros_static_library_ide/libmicroros
+    mkdir -p "$EXTRA_PKG_DIR"
+    if [ -L "$EXTRA_PKG_DIR/zit6_interfaces" ]; then rm "$EXTRA_PKG_DIR/zit6_interfaces"; fi
+    cp -rL zit6_interfaces "$EXTRA_PKG_DIR/"
+
+    # 1. 生成 micro-ROS 静态库 (使用 Docker)
+    echo "[1/3] Generating micro-ROS library via Docker..."
+    docker run --rm --network host --name microros_builder \
+      -v "${PROJECT_ROOT}:/project" \
+      --env MICROROS_LIBRARY_FOLDER=micro_ros_stm32cubemx_utils/microros_static_library_ide \
+      --env http_proxy=http://127.0.0.1:7897 \
+      --env https_proxy=http://127.0.0.1:7897 \
+      --env all_proxy=socks5://127.0.0.1:7897 \
+      microros/micro_ros_static_library_builder:humble
+    
+    # 保存哈希
+    echo "$CURRENT_HASH" > "$HASH_FILE"
+    echo ">>> micro-ROS library generation finished."
+fi
 
 # 2. 编译 STM32 固件
 echo "[2/3] Building STM32 firmware..."

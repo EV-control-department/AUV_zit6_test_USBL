@@ -279,4 +279,6 @@ control_msgs/JointTolerance.msg
 control_msgs/InterfaceValue.msg
 control_msgs/Keys.msg
 zit6_interfaces/ZitSetpoint.msg
+zit6_interfaces/ZitPidStatus.msg
+zit6_interfaces/ZitPid.msg
 zit6_interfaces/ZitStatus.msg

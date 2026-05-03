@@ -29,6 +29,8 @@
 // 包含自定义消息 (v5.0 规范)
 #include <zit6_interfaces/msg/zit_setpoint.h>
 #include <zit6_interfaces/msg/zit_status.h>
+#include <zit6_interfaces/msg/zit_pid.h>
+#include <zit6_interfaces/msg/zit_pid_status.h>
 
 // --- 硬件抽象层接口 ---
 extern "C" {
@@ -86,6 +88,21 @@ static auv::NavState snapshotNavState() {
   nav = shared_nav_state;
   taskEXIT_CRITICAL();
   return nav;
+}
+
+// 订阅回调：ZitPid
+void onZitPid(const void *msgin) {
+  const auto *msg = (const zit6_interfaces__msg__ZitPid *)msgin;
+  if (!std::isfinite(msg->kp) || !std::isfinite(msg->ki) ||
+      !std::isfinite(msg->kd)) {
+    return;
+  }
+  chassis.configurePID(msg->axis, msg->is_pos_ring, msg->kp, msg->ki, msg->kd,
+                        msg->i_limit, msg->out_limit);
+  
+  if (msg->is_pos_ring) {
+    chassis.configureProfile(msg->axis, msg->max_v, msg->max_a);
+  }
 }
 
 // 订阅回调：ZitSetpoint (v5.0)
@@ -304,12 +321,14 @@ void UserApp_ControlTask(void *argument) {
 static rclc_support_t support;
 static rcl_node_t node;
 static rclc_executor_t executor;
-static rcl_subscription_t setpoint_sub, arm_sub, ins_cmd_sub;
-static rcl_publisher_t pos_pub, vel_pub, thr_pub, zithbt_pub, status_pub;
+static rcl_subscription_t setpoint_sub, arm_sub, ins_cmd_sub, pid_sub;
+static rcl_publisher_t pos_pub, vel_pub, thr_pub, zithbt_pub, status_pub, pid_status_pub;
 
 static std_msgs__msg__Float32MultiArray pos_fb_msg, vel_fb_msg, thr_fb_msg;
 static zit6_interfaces__msg__ZitSetpoint setpoint_msg;
 static zit6_interfaces__msg__ZitStatus status_msg;
+static zit6_interfaces__msg__ZitPid pid_msg;
+static zit6_interfaces__msg__ZitPidStatus pid_status_msg;
 static std_msgs__msg__UInt8 ins_cmd_msg;
 static std_msgs__msg__UInt32 arm_msg, node_heartbeat_msg;
 
@@ -329,6 +348,7 @@ void cleanupMicroRos() {
   rcl_subscription_fini(&setpoint_sub, &node);
   rcl_subscription_fini(&arm_sub, &node);
   rcl_subscription_fini(&ins_cmd_sub, &node);
+  rcl_subscription_fini(&pid_sub, &node);
   
   rcl_node_fini(&node);
   rclc_support_fini(&support);
@@ -397,18 +417,21 @@ void UserApp_MicroRosTask(void *argument) {
           rclc_publisher_init_default(&vel_pub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray), "/zit6/state/vel");
           rclc_publisher_init_default(&thr_pub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray), "/zit6/state/thr");
           rclc_publisher_init_default(&zithbt_pub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt32), "/zit6/state/zithbt");
-          rclc_publisher_init_default(&status_pub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(zit6_interfaces, msg, ZitStatus), "/zit6/state/memu");
+          rclc_publisher_init_default(&status_pub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(zit6_interfaces, msg, ZitStatus), "/zit6/state/status");
+          rclc_publisher_init_default(&pid_status_pub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(zit6_interfaces, msg, ZitPidStatus), "/zit6/state/pid_status");
 
           // Subscriptions
           rclc_subscription_init_default(&setpoint_sub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(zit6_interfaces, msg, ZitSetpoint), "/zit6/cmd/setpoint");
           rclc_subscription_init_default(&arm_sub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt32), "/zit6/cmd/agxhbt");
           rclc_subscription_init_default(&ins_cmd_sub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt8), "/zit6/cmd/ins");
+          rclc_subscription_init_default(&pid_sub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(zit6_interfaces, msg, ZitPid), "/zit6/cmd/pid");
 
           // Executor
-          rclc_executor_init(&executor, &support.context, 3, &rcl_allocator);
+          rclc_executor_init(&executor, &support.context, 4, &rcl_allocator);
           rclc_executor_add_subscription(&executor, &setpoint_sub, &setpoint_msg, &onZitSetpoint, ON_NEW_DATA);
           rclc_executor_add_subscription(&executor, &arm_sub, &arm_msg, &onArmHeartbeat, ON_NEW_DATA);
           rclc_executor_add_subscription(&executor, &ins_cmd_sub, &ins_cmd_msg, &onInsCommand, ON_NEW_DATA);
+          rclc_executor_add_subscription(&executor, &pid_sub, &pid_msg, &onZitPid, ON_NEW_DATA);
           
           state = AGENT_CONNECTED;
         }
@@ -419,6 +442,7 @@ void UserApp_MicroRosTask(void *argument) {
     } else {
       // 检查 Agent 是否在线 (PING)，如果断开则进入重连流程
       // 增加超时到 500ms，重试 3 次，防止因为网络抖动误判断开
+      static uint32_t last_pid_pub_tick = 0;
       if (RCL_RET_OK != rmw_uros_ping_agent(500, 3)) {
         cleanupMicroRos();
         state = WAITING_AGENT;
@@ -465,6 +489,26 @@ void UserApp_MicroRosTask(void *argument) {
           status_msg.error_flags = 0;
           taskEXIT_CRITICAL();
           rcl_publish(&status_pub, &status_msg, NULL);
+        }
+
+        if (now_ms - last_pid_pub_tick >= 1000) {
+          last_pid_pub_tick = now_ms;
+          for (int i = 0; i < 4; i++) {
+            // Position Loop
+            auto p_cfg = chassis.getPIDConfig(i, true);
+            pid_status_msg.pos_kp[i] = p_cfg.kp;
+            chassis.getProfileLimits(i, pid_status_msg.pos_max_v[i], pid_status_msg.pos_max_a[i]);
+            pid_status_msg.pos_out_limit[i] = p_cfg.output_limit;
+            
+            // Velocity Loop
+            auto v_cfg = chassis.getPIDConfig(i, false);
+            pid_status_msg.vel_kp[i] = v_cfg.kp;
+            pid_status_msg.vel_ki[i] = v_cfg.ki;
+            pid_status_msg.vel_kd[i] = v_cfg.kd;
+            pid_status_msg.vel_i_limit[i] = v_cfg.i_limit;
+            pid_status_msg.vel_out_limit[i] = v_cfg.output_limit;
+          }
+          rcl_publish(&pid_status_pub, &pid_status_msg, NULL);
         }
       }
     }

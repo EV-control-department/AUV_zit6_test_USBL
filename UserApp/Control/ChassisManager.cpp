@@ -25,13 +25,18 @@ void ChassisManager::configurePID(int axis, bool is_pos_ring, float kp,
                                   float out_limit) {
   if (axis < 0 || axis >= 4)
     return;
-  PID_Controller::Config cfg;
-  cfg.kp = kp;
-  cfg.ki = ki;
-  cfg.kd = kd;
-  cfg.i_limit = i_limit;
-  cfg.output_limit = out_limit;
-  cfg.dt = 0.01f;
+  
+  // 获取当前配置，用于增量修改
+  PID_Controller::Config cfg = getPIDConfig(axis, is_pos_ring);
+  
+  if (kp >= 0.0f) cfg.kp = kp;
+  if (ki >= 0.0f) cfg.ki = ki;
+  if (kd >= 0.0f) cfg.kd = kd;
+  if (i_limit >= 0.0f) cfg.i_limit = i_limit;
+  if (out_limit >= 0.0f) cfg.output_limit = out_limit;
+  
+  cfg.dt = 0.01f; // 步长固定
+  
   if (is_pos_ring)
     pos_pids_[axis].setConfig(cfg);
   else

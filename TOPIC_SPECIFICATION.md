@@ -42,6 +42,22 @@
 
 注意：发送端应确保不发送 NaN/Inf。嵌入式在收到不合法数值时应拒绝并在 `/zit6/state/status` 中标注错误标志。
 
+- 话题：`/zit6/cmd/pid`
+    - 类型：`zit6_interfaces/ZitPid`
+    - 描述：动态配置指定轴与控制环的 PID 参数。支持在不重启固件的情况下进行在线调优。
+
+### 1.2 `ZitPid` 消息定义与字段说明
+该消息支持**局部参数更新**逻辑：若某个浮点数字段为**负值**，固件将自动滤除该项，维持当前生效的参数值不变。
+
+- `uint8 axis`：轴索引 (0: X, 1: Y, 2: Z, 3: Yaw)
+- `bool is_pos_ring`：选择控制环 (true: 位置环, false: 速度环)
+- **当 `is_pos_ring == true` (位置环配置) 时**：
+    - `kp`：位置环比例增益（若 < 0 则不修改）。
+    - `max_v, max_a`：规划器物理限值（若 < 0 则不修改）。
+- **当 `is_pos_ring == false` (速度环配置) 时**：
+    - `kp, ki, kd`：速度环 PID 参数（若 < 0 则不修改）。
+    - `i_limit, out_limit`：限幅参数（若 < 0 则不修改）。
+
 ---
 
 ## 2. 状态反馈 (State Topics)
@@ -51,7 +67,12 @@
 - 话题：`/zit6/state/status`
     - 类型：`zit6_interfaces/ZitStatus`
     - 推荐频率：10Hz
-    - 描述：核心状态汇总，必须包含安全与运行态信息，便于上位机判断是否可以发命令或解锁。
+    - 描述：核心状态汇总，必须包含安全与运行态信息。
+
+- 话题：`/zit6/state/pid_status`
+    - 类型：`zit6_interfaces/ZitPidStatus`
+    - 推荐频率：1Hz
+    - 描述：全轴 PID 与运动学规划器参数回传大包，用于直观确认系统当前的所有控制参数。
 
 - 话题：`/zit6/state/zithbt`
     - 类型：`std_msgs/UInt32`

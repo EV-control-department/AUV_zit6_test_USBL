@@ -48,6 +48,12 @@ public:
      * @brief 设置物理运行边界
      */
     void setLimits(float max_v, float max_a);
+    
+    /**
+     * @brief 获取当前物理运行边界
+     */
+    float getMaxV() const { return limits_.max_v; }
+    float getMaxA() const { return limits_.max_a; }
 
     /**
      * @brief 100Hz 演进核心算法

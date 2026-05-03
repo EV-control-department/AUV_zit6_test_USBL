@@ -142,6 +142,7 @@
      - 前馈叠加
      - 输出限幅
 5. 输出结果由状态发布器上报到 `/zit6/state/thr`、`/zit6/state/status`、`/zit6/state/isarm` 和 `/zit6/state/zithbt`。
+6. **参数更新流**：`onZitPid()` 订阅并解析 `/zit6/cmd/pid`，调用 `ChassisManager::configurePID()` 实时重载算法增益，无需停机或重新烧录。
 
 这条链路的关键是：`ChassisManager` 现在不是单纯“算数”，它同时承担了状态机、路由器和级联控制器三件事。
 

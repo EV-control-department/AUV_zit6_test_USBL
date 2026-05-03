@@ -1,0 +1,276 @@
+[0.007s] Invoking command in '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build/zit6_interfaces': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --build /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build/zit6_interfaces -- -j32 -l32
+[0.033s] -- Found ament_cmake: 2.5.6 (/opt/ros/jazzy/share/ament_cmake/cmake)
+[0.105s] -- Override CMake install command with custom implementation using symlinks instead of copying resources
+[0.116s] -- Found rosidl_default_generators: 1.6.0 (/opt/ros/jazzy/share/rosidl_default_generators/cmake)
+[0.119s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[0.147s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[0.171s] -- Found rosidl_adapter: 4.6.7 (/opt/ros/jazzy/share/rosidl_adapter/cmake)
+[0.341s] -- Found ament_cmake_ros: 0.12.0 (/opt/ros/jazzy/share/ament_cmake_ros/cmake)
+[0.406s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[0.490s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[0.492s] -- Found python_cmake_module: 0.11.1 (/opt/ros/jazzy/share/python_cmake_module/cmake)
+[0.679s] -- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter Development NumPy Development.Module Development.Embed 
+[0.705s] -- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+[0.715s] -- Configuring done (0.7s)
+[0.746s] -- Generating done (0.0s)
+[0.754s] -- Build files have been written to: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build/zit6_interfaces
+[0.783s] [  1%] [34m[1mGenerating type hashes for ROS interfaces[0m
+[0.783s] [  3%] [34m[1mGenerating Rust code for ROS interfaces[0m
+[0.789s] [  3%] Built target ament_cmake_python_symlink_zit6_interfaces
+[0.929s] running egg_info
+[0.941s] writing zit6_interfaces.egg-info/PKG-INFO
+[0.941s] writing dependency_links to zit6_interfaces.egg-info/dependency_links.txt
+[0.941s] writing top-level names to zit6_interfaces.egg-info/top_level.txt
+[0.971s] [  3%] Built target zit6_interfaces__rosidl_generator_type_description
+[0.974s] reading manifest file 'zit6_interfaces.egg-info/SOURCES.txt'
+[0.975s] writing manifest file 'zit6_interfaces.egg-info/SOURCES.txt'
+[0.978s] [  4%] [34m[1mGenerating C code for ROS interfaces[0m
+[0.987s] [  6%] [34m[1mGenerating C++ code for ROS interfaces[0m
+[0.994s] [  6%] Built target ament_cmake_python_build_zit6_interfaces_egg
+[0.994s] [  6%] Built target zit6_interfaces__rs
+[1.248s] [  6%] Built target zit6_interfaces__cpp
+[1.286s] [  7%] [32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_generator_c.dir/rosidl_generator_c/zit6_interfaces/msg/detail/zit_setpoint__description.c.o[0m
+[1.286s] [ 10%] [32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_generator_c.dir/rosidl_generator_c/zit6_interfaces/msg/detail/zit_setpoint__type_support.c.o[0m
+[1.286s] [ 10%] [32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_generator_c.dir/rosidl_generator_c/zit6_interfaces/msg/detail/zit_setpoint__functions.c.o[0m
+[1.287s] [ 15%] [32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_generator_c.dir/rosidl_generator_c/zit6_interfaces/msg/detail/zit_status__type_support.c.o[0m
+[1.287s] [ 15%] [32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_generator_c.dir/rosidl_generator_c/zit6_interfaces/msg/detail/zit_status__functions.c.o[0m
+[1.287s] [ 15%] [32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_generator_c.dir/rosidl_generator_c/zit6_interfaces/msg/detail/zit_status__description.c.o[0m
+[1.287s] [ 16%] [32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_generator_c.dir/rosidl_generator_c/zit6_interfaces/msg/detail/zit_pid__functions.c.o[0m
+[1.287s] [ 20%] [32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_generator_c.dir/rosidl_generator_c/zit6_interfaces/msg/detail/zit_pid__description.c.o[0m
+[1.287s] [ 20%] [32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_generator_c.dir/rosidl_generator_c/zit6_interfaces/msg/detail/zit_pid__type_support.c.o[0m
+[1.287s] [ 24%] [32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_generator_c.dir/rosidl_generator_c/zit6_interfaces/msg/detail/zit_pid_status__functions.c.o[0m
+[1.287s] [ 24%] [32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_generator_c.dir/rosidl_generator_c/zit6_interfaces/msg/detail/zit_pid_status__description.c.o[0m
+[1.288s] [ 24%] [32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_generator_c.dir/rosidl_generator_c/zit6_interfaces/msg/detail/zit_pid_status__type_support.c.o[0m
+[1.330s] [ 26%] [32m[1mLinking C shared library libzit6_interfaces__rosidl_generator_c.so[0m
+[1.357s] [ 26%] Built target zit6_interfaces__rosidl_generator_c
+[1.365s] [ 30%] [34m[1mGenerating C++ type support dispatch for ROS interfaces[0m
+[1.366s] [ 30%] [34m[1mGenerating C introspection for ROS interfaces[0m
+[1.366s] [ 30%] [34m[1mGenerating C++ introspection for ROS interfaces[0m
+[1.366s] [ 35%] [34m[1mGenerating C type support dispatch for ROS interfaces[0m
+[1.366s] [ 35%] [34m[1mGenerating C++ type support for eProsima Fast-RTPS[0m
+[1.366s] [ 35%] [34m[1mGenerating C type support for eProsima Fast-RTPS[0m
+[1.595s] [ 38%] [32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/zit6_interfaces/msg/zit_status__type_support.cpp.o[0m
+[1.596s] [ 38%] [32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/zit6_interfaces/msg/zit_pid_status__type_support.cpp.o[0m
+[1.596s] [ 40%] [32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/zit6_interfaces/msg/zit_pid__type_support.cpp.o[0m
+[1.596s] [ 41%] [32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/zit6_interfaces/msg/zit_setpoint__type_support.cpp.o[0m
+[1.597s] [ 43%] [32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/zit6_interfaces/msg/zit_setpoint__type_support.cpp.o[0m
+[1.598s] [ 44%] [32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/zit6_interfaces/msg/zit_status__type_support.cpp.o[0m
+[1.598s] [ 46%] [32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/zit6_interfaces/msg/zit_pid_status__type_support.cpp.o[0m
+[1.600s] [ 47%] [32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/zit6_interfaces/msg/zit_pid__type_support.cpp.o[0m
+[1.634s] [ 55%] [32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/zit6_interfaces/msg/detail/zit_pid__type_support.cpp.o[0m
+[1.634s] [ 55%] [32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/zit6_interfaces/msg/detail/zit_setpoint__type_support.cpp.o[0m
+[1.634s] [ 55%] [32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/zit6_interfaces/msg/detail/zit_status__type_support.cpp.o[0m
+[1.634s] [ 55%] [32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/zit6_interfaces/msg/detail/zit_pid_status__type_support.cpp.o[0m
+[1.634s] [ 55%] [32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/zit6_interfaces/msg/detail/zit_setpoint__type_support.c.o[0m
+[1.634s] [ 56%] [32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/zit6_interfaces/msg/detail/zit_status__type_support.c.o[0m
+[1.636s] [ 60%] [32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/zit6_interfaces/msg/detail/zit_pid__type_support.c.o[0m
+[1.636s] [ 60%] [32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/zit6_interfaces/msg/detail/zit_pid_status__type_support.c.o[0m
+[1.644s] [ 61%] [32m[1mLinking CXX shared library libzit6_interfaces__rosidl_typesupport_c.so[0m
+[1.687s] [ 63%] [32m[1mLinking C shared library libzit6_interfaces__rosidl_typesupport_introspection_c.so[0m
+[1.690s] [ 66%] [32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/zit6_interfaces/msg/detail/dds_fastrtps/zit_setpoint__type_support.cpp.o[0m
+[1.690s] [ 67%] [32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/zit6_interfaces/msg/detail/dds_fastrtps/zit_status__type_support.cpp.o[0m
+[1.691s] [ 67%] [32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/zit6_interfaces/msg/detail/dds_fastrtps/zit_pid__type_support.cpp.o[0m
+[1.692s] [ 69%] [32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/zit6_interfaces/msg/detail/dds_fastrtps/zit_pid_status__type_support.cpp.o[0m
+[1.694s] [ 69%] Built target zit6_interfaces__rosidl_typesupport_c
+[1.705s] [ 70%] [32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/zit6_interfaces/msg/detail/zit_status__type_support_c.cpp.o[0m
+[1.705s] [ 72%] [32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/zit6_interfaces/msg/detail/zit_setpoint__type_support_c.cpp.o[0m
+[1.705s] [ 73%] [32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/zit6_interfaces/msg/detail/zit_pid__type_support_c.cpp.o[0m
+[1.707s] [ 75%] [32mBuilding CXX object CMakeFiles/zit6_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/zit6_interfaces/msg/detail/zit_pid_status__type_support_c.cpp.o[0m
+[1.721s] [ 75%] Built target zit6_interfaces__rosidl_typesupport_introspection_c
+[1.882s] [ 76%] [32m[1mLinking CXX shared library libzit6_interfaces__rosidl_typesupport_cpp.so[0m
+[1.931s] [ 76%] Built target zit6_interfaces__rosidl_typesupport_cpp
+[1.937s] [ 78%] [32m[1mLinking CXX shared library libzit6_interfaces__rosidl_typesupport_introspection_cpp.so[0m
+[2.001s] [ 78%] Built target zit6_interfaces__rosidl_typesupport_introspection_cpp
+[2.103s] [ 81%] [32m[1mLinking CXX shared library libzit6_interfaces__rosidl_typesupport_fastrtps_cpp.so[0m
+[2.103s] [ 81%] [32m[1mLinking CXX shared library libzit6_interfaces__rosidl_typesupport_fastrtps_c.so[0m
+[2.154s] [ 81%] Built target zit6_interfaces__rosidl_typesupport_fastrtps_c
+[2.177s] [ 81%] Built target zit6_interfaces__rosidl_typesupport_fastrtps_cpp
+[2.197s] [ 81%] Built target zit6_interfaces
+[2.213s] [ 83%] [34m[1mGenerating Python code for ROS interfaces[0m
+[2.707s] [ 83%] Built target zit6_interfaces__py
+[2.733s] [ 84%] [32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_generator_py.dir/rosidl_generator_py/zit6_interfaces/msg/_zit_status_s.c.o[0m
+[2.733s] [ 87%] [32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_generator_py.dir/rosidl_generator_py/zit6_interfaces/msg/_zit_setpoint_s.c.o[0m
+[2.733s] [ 87%] [32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_generator_py.dir/rosidl_generator_py/zit6_interfaces/msg/_zit_pid_s.c.o[0m
+[2.734s] [ 89%] [32mBuilding C object CMakeFiles/zit6_interfaces__rosidl_generator_py.dir/rosidl_generator_py/zit6_interfaces/msg/_zit_pid_status_s.c.o[0m
+[2.830s] [ 90%] [32m[1mLinking C shared library libzit6_interfaces__rosidl_generator_py.so[0m
+[2.858s] [ 90%] Built target zit6_interfaces__rosidl_generator_py
+[2.878s] [ 95%] [32mBuilding C object CMakeFiles/zit6_interfaces_s__rosidl_typesupport_introspection_c.dir/rosidl_generator_py/zit6_interfaces/_zit6_interfaces_s.ep.rosidl_typesupport_introspection_c.c.o[0m
+[2.878s] [ 95%] [32mBuilding C object CMakeFiles/zit6_interfaces_s__rosidl_typesupport_fastrtps_c.dir/rosidl_generator_py/zit6_interfaces/_zit6_interfaces_s.ep.rosidl_typesupport_fastrtps_c.c.o[0m
+[2.878s] [ 95%] [32mBuilding C object CMakeFiles/zit6_interfaces_s__rosidl_typesupport_c.dir/rosidl_generator_py/zit6_interfaces/_zit6_interfaces_s.ep.rosidl_typesupport_c.c.o[0m
+[2.958s] [ 96%] [32m[1mLinking C shared module rosidl_generator_py/zit6_interfaces/zit6_interfaces_s__rosidl_typesupport_c.so[0m
+[2.958s] [ 98%] [32m[1mLinking C shared module rosidl_generator_py/zit6_interfaces/zit6_interfaces_s__rosidl_typesupport_introspection_c.so[0m
+[2.960s] [100%] [32m[1mLinking C shared module rosidl_generator_py/zit6_interfaces/zit6_interfaces_s__rosidl_typesupport_fastrtps_c.so[0m
+[2.984s] [100%] Built target zit6_interfaces_s__rosidl_typesupport_c
+[2.986s] [100%] Built target zit6_interfaces_s__rosidl_typesupport_fastrtps_c
+[2.986s] [100%] Built target zit6_interfaces_s__rosidl_typesupport_introspection_c
+[2.997s] Invoked command in '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build/zit6_interfaces' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --build /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build/zit6_interfaces -- -j32 -l32
+[3.004s] Invoking command in '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build/zit6_interfaces': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --install /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build/zit6_interfaces
+[3.010s] -- Install configuration: ""
+[3.010s] -- Execute custom install script
+[3.011s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/ament_index/resource_index/rosidl_interfaces/zit6_interfaces
+[3.011s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/msg/ZitSetpoint.json
+[3.011s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/msg/ZitStatus.json
+[3.011s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/msg/ZitPid.json
+[3.011s] -- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/msg/ZitPidStatus.json
+[3.021s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_pid__functions.h
+[3.021s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_pid__struct.h
+[3.021s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_pid__type_support.h
+[3.021s] -- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_pid_status__functions.h
+[3.029s] -- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_pid_status__struct.h
+[3.035s] -- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_pid_status__type_support.h
+[3.041s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_setpoint__functions.h
+[3.042s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_setpoint__struct.h
+[3.042s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_setpoint__type_support.h
+[3.042s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_status__functions.h
+[3.042s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_status__struct.h
+[3.042s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_status__type_support.h
+[3.042s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/rosidl_generator_c__visibility_control.h
+[3.042s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/zit_pid.h
+[3.042s] -- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/zit_pid_status.h
+[3.048s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/zit_setpoint.h
+[3.049s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/zit_status.h
+[3.049s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/environment/library_path.sh
+[3.049s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/environment/library_path.dsv
+[3.049s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_pid__rosidl_typesupport_fastrtps_c.h
+[3.049s] -- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_pid_status__rosidl_typesupport_fastrtps_c.h
+[3.056s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_setpoint__rosidl_typesupport_fastrtps_c.h
+[3.056s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_status__rosidl_typesupport_fastrtps_c.h
+[3.056s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/rosidl_typesupport_fastrtps_c__visibility_control.h
+[3.057s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_pid__rosidl_typesupport_introspection_c.h
+[3.057s] -- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_pid_status__rosidl_typesupport_introspection_c.h
+[3.064s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_setpoint__rosidl_typesupport_introspection_c.h
+[3.064s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_status__rosidl_typesupport_introspection_c.h
+[3.064s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/rosidl_typesupport_introspection_c__visibility_control.h
+[3.064s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_pid__builder.hpp
+[3.064s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_pid__struct.hpp
+[3.064s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_pid__traits.hpp
+[3.064s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_pid__type_support.hpp
+[3.064s] -- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_pid_status__builder.hpp
+[3.071s] -- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_pid_status__struct.hpp
+[3.077s] -- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_pid_status__traits.hpp
+[3.082s] -- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_pid_status__type_support.hpp
+[3.089s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_setpoint__builder.hpp
+[3.089s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_setpoint__struct.hpp
+[3.089s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_setpoint__traits.hpp
+[3.089s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_setpoint__type_support.hpp
+[3.089s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_status__builder.hpp
+[3.089s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_status__struct.hpp
+[3.089s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_status__traits.hpp
+[3.089s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_status__type_support.hpp
+[3.089s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/rosidl_generator_cpp__visibility_control.hpp
+[3.089s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/zit_pid.hpp
+[3.089s] -- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/zit_pid_status.hpp
+[3.096s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/zit_setpoint.hpp
+[3.096s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/zit_status.hpp
+[3.096s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_pid__rosidl_typesupport_fastrtps_cpp.hpp
+[3.096s] -- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_pid_status__rosidl_typesupport_fastrtps_cpp.hpp
+[3.102s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_setpoint__rosidl_typesupport_fastrtps_cpp.hpp
+[3.102s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_status__rosidl_typesupport_fastrtps_cpp.hpp
+[3.102s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/rosidl_typesupport_fastrtps_cpp__visibility_control.h
+[3.103s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_pid__rosidl_typesupport_introspection_cpp.hpp
+[3.103s] -- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_pid_status__rosidl_typesupport_introspection_cpp.hpp
+[3.109s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_setpoint__rosidl_typesupport_introspection_cpp.hpp
+[3.109s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/include/zit6_interfaces/zit6_interfaces/msg/detail/zit_status__rosidl_typesupport_introspection_cpp.hpp
+[3.109s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/environment/pythonpath.sh
+[3.109s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/environment/pythonpath.dsv
+[3.109s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces-0.0.1-py3.12.egg-info/PKG-INFO
+[3.109s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces-0.0.1-py3.12.egg-info/SOURCES.txt
+[3.109s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces-0.0.1-py3.12.egg-info/dependency_links.txt
+[3.110s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces-0.0.1-py3.12.egg-info/top_level.txt
+[3.110s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/__init__.py
+[3.110s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/_zit6_interfaces_s.ep.rosidl_typesupport_c.c
+[3.110s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/_zit6_interfaces_s.ep.rosidl_typesupport_fastrtps_c.c
+[3.110s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/_zit6_interfaces_s.ep.rosidl_typesupport_introspection_c.c
+[3.110s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/msg/__init__.py
+[3.110s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/msg/_zit_pid.py
+[3.110s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/msg/_zit_pid_s.c
+[3.111s] -- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/msg/_zit_pid_status.py
+[3.119s] -- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/msg/_zit_pid_status_s.c
+[3.128s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/msg/_zit_setpoint.py
+[3.128s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/msg/_zit_setpoint_s.c
+[3.128s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/msg/_zit_status.py
+[3.128s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/msg/_zit_status_s.c
+[3.128s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/zit6_interfaces_s__rosidl_typesupport_c.so
+[3.128s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/zit6_interfaces_s__rosidl_typesupport_fastrtps_c.so
+[3.128s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/zit6_interfaces_s__rosidl_typesupport_introspection_c.so
+[3.129s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/zit6_interfaces_s__rosidl_typesupport_fastrtps_c.so
+[3.129s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/zit6_interfaces_s__rosidl_typesupport_introspection_c.so
+[3.129s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/zit6_interfaces_s__rosidl_typesupport_c.so
+[3.129s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/ament_index/resource_index/rust_packages/zit6_interfaces
+[3.129s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/rust/Cargo.toml
+[3.129s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/rust/build.rs
+[3.129s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/rust/src/lib.rs
+[3.129s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/rust/src/msg.rs
+[3.130s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/rust/src/msg/rmw.rs
+[3.130s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/msg/ZitSetpoint.idl
+[3.130s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/msg/ZitStatus.idl
+[3.130s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/msg/ZitPid.idl
+[3.130s] -- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/msg/ZitPidStatus.idl
+[3.136s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/msg/ZitSetpoint.msg
+[3.136s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/msg/ZitStatus.msg
+[3.136s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/msg/ZitPid.msg
+[3.136s] -- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/msg/ZitPidStatus.msg
+[3.144s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/ament_index/resource_index/package_run_dependencies/zit6_interfaces
+[3.144s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/ament_index/resource_index/parent_prefix_path/zit6_interfaces
+[3.144s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/environment/ament_prefix_path.sh
+[3.144s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/environment/ament_prefix_path.dsv
+[3.144s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/environment/path.sh
+[3.144s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/environment/path.dsv
+[3.144s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/local_setup.bash
+[3.144s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/local_setup.sh
+[3.145s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/local_setup.zsh
+[3.145s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/local_setup.dsv
+[3.145s] -- Symlinking: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/package.dsv
+[3.154s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/ament_index/resource_index/packages/zit6_interfaces
+[3.154s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/rosidl_cmake-extras.cmake
+[3.154s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/ament_cmake_export_include_directories-extras.cmake
+[3.154s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/ament_cmake_export_libraries-extras.cmake
+[3.155s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/ament_cmake_export_targets-extras.cmake
+[3.155s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/rosidl_cmake_export_typesupport_targets-extras.cmake
+[3.155s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/ament_cmake_export_dependencies-extras.cmake
+[3.155s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/rosidl_cmake_export_typesupport_libraries-extras.cmake
+[3.155s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/zit6_interfacesConfig.cmake
+[3.155s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/zit6_interfacesConfig-version.cmake
+[3.155s] -- Up-to-date symlink: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/package.xml
+[3.157s] -- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_generator_c.so
+[3.157s] -- Set non-toolchain portion of runtime path of "/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_generator_c.so" to ""
+[3.158s] -- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_typesupport_fastrtps_c.so
+[3.158s] -- Set non-toolchain portion of runtime path of "/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_typesupport_fastrtps_c.so" to ""
+[3.158s] -- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_typesupport_introspection_c.so
+[3.159s] -- Set non-toolchain portion of runtime path of "/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_typesupport_introspection_c.so" to ""
+[3.159s] -- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_typesupport_c.so
+[3.159s] -- Set non-toolchain portion of runtime path of "/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_typesupport_c.so" to ""
+[3.159s] -- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_typesupport_fastrtps_cpp.so
+[3.160s] -- Set non-toolchain portion of runtime path of "/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_typesupport_fastrtps_cpp.so" to ""
+[3.160s] -- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_typesupport_introspection_cpp.so
+[3.161s] -- Set non-toolchain portion of runtime path of "/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_typesupport_introspection_cpp.so" to ""
+[3.161s] -- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_typesupport_cpp.so
+[3.161s] -- Set non-toolchain portion of runtime path of "/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_typesupport_cpp.so" to ""
+[3.192s] Listing '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces'...
+[3.192s] Compiling '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/__init__.py'...
+[3.193s] Listing '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/msg'...
+[3.193s] Compiling '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/msg/__init__.py'...
+[3.193s] Compiling '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/msg/_zit_pid.py'...
+[3.193s] Compiling '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/msg/_zit_pid_status.py'...
+[3.193s] Compiling '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/msg/_zit_setpoint.py'...
+[3.193s] Compiling '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/python3.12/site-packages/zit6_interfaces/msg/_zit_status.py'...
+[3.196s] -- Installing: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_generator_py.so
+[3.196s] -- Set non-toolchain portion of runtime path of "/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/lib/libzit6_interfaces__rosidl_generator_py.so" to ""
+[3.196s] -- Up-to-date: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/export_zit6_interfaces__rosidl_generator_cExport.cmake
+[3.196s] -- Up-to-date: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/export_zit6_interfaces__rosidl_generator_cExport-noconfig.cmake
+[3.196s] -- Up-to-date: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/export_zit6_interfaces__rosidl_typesupport_fastrtps_cExport.cmake
+[3.197s] -- Up-to-date: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/export_zit6_interfaces__rosidl_typesupport_fastrtps_cExport-noconfig.cmake
+[3.197s] -- Up-to-date: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/zit6_interfaces__rosidl_typesupport_introspection_cExport.cmake
+[3.197s] -- Up-to-date: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/zit6_interfaces__rosidl_typesupport_introspection_cExport-noconfig.cmake
+[3.197s] -- Up-to-date: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/zit6_interfaces__rosidl_typesupport_cExport.cmake
+[3.197s] -- Up-to-date: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/zit6_interfaces__rosidl_typesupport_cExport-noconfig.cmake
+[3.197s] -- Up-to-date: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/export_zit6_interfaces__rosidl_generator_cppExport.cmake
+[3.197s] -- Up-to-date: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/export_zit6_interfaces__rosidl_typesupport_fastrtps_cppExport.cmake
+[3.197s] -- Up-to-date: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/export_zit6_interfaces__rosidl_typesupport_fastrtps_cppExport-noconfig.cmake
+[3.197s] -- Up-to-date: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/zit6_interfaces__rosidl_typesupport_introspection_cppExport.cmake
+[3.197s] -- Up-to-date: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/zit6_interfaces__rosidl_typesupport_introspection_cppExport-noconfig.cmake
+[3.197s] -- Up-to-date: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/zit6_interfaces__rosidl_typesupport_cppExport.cmake
+[3.197s] -- Up-to-date: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/zit6_interfaces__rosidl_typesupport_cppExport-noconfig.cmake
+[3.197s] -- Up-to-date: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/export_zit6_interfaces__rosidl_generator_pyExport.cmake
+[3.197s] -- Up-to-date: /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/zit6_interfaces/share/zit6_interfaces/cmake/export_zit6_interfaces__rosidl_generator_pyExport-noconfig.cmake
+[3.199s] Invoked command in '/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build/zit6_interfaces' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy /usr/bin/cmake --install /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build/zit6_interfaces

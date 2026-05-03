@@ -38,15 +38,37 @@ public:
      * @param kp, ki, kd, i_limit, out_limit 参数
      */
     void configurePID(int axis, bool is_pos_ring, float kp, float ki, float kd, float i_limit, float out_limit);
+    
+    /**
+     * @brief 获取指定轴的 PID 配置
+     */
+    PID_Controller::Config getPIDConfig(int axis, bool is_pos_ring) const {
+        if (axis < 0 || axis >= 4) return {};
+        return is_pos_ring ? pos_pids_[axis].getConfig() : vel_pids_[axis].getConfig();
+    }
+
+    /**
+     * @brief 获取指定轴的运动学约束
+     */
+    void getProfileLimits(int axis, float& max_v, float& max_a) const {
+        if (axis >= 0 && axis < 4) {
+            max_v = profiles_[axis].getMaxV();
+            max_a = profiles_[axis].getMaxA();
+        }
+    }
 
     /**
      * @brief 配置指定轴的运动学约束
      * @param axis 轴索引 (0-3: X, Y, Z, Yaw)
-     * @param max_v 最大速度
-     * @param max_a 最大加速度
+     * @param max_v 最大速度 (若 < 0 则保留当前值)
+     * @param max_a 最大加速度 (若 < 0 则保留当前值)
      */
     void configureProfile(int axis, float max_v, float max_a) {
-        if (axis >= 0 && axis < 4) profiles_[axis].setLimits(max_v, max_a);
+        if (axis >= 0 && axis < 4) {
+            float v = (max_v >= 0.0f) ? max_v : profiles_[axis].getMaxV();
+            float a = (max_a >= 0.0f) ? max_a : profiles_[axis].getMaxA();
+            profiles_[axis].setLimits(v, a);
+        }
     }
 
     /**
