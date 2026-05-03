@@ -57,17 +57,17 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
   Core/Src/stm32h7xx_it.c
   Core/Src/stm32h7xx_hal_msp.c
   Core/Src/stm32h7xx_hal_timebase_tim.c
-  UserApp/Application/AppMain.cpp
-  UserApp/Common/GlobalContext.cpp
-  UserApp/Application/ControlTask.cpp
-  UserApp/Application/IICTask.cpp
-  UserApp/Application/MicroRosTask.cpp
-  UserApp/Peripherals/INS_Driver.cpp
-  UserApp/Peripherals/MS5837_Class.cpp
-  UserApp/Control/ChassisManager.cpp
-  UserApp/Control/PID_Controller.cpp
-  UserApp/Control/KinematicProfile.cpp
-  UserApp/Control/CoordinateManager.cpp
+    UserApp/Application/AppMain.cpp
+    UserApp/Application/ControlTask.cpp
+    UserApp/Application/MicroRosTask.cpp
+    UserApp/Application/IICTask.cpp
+    UserApp/Common/GlobalContext.cpp
+    UserApp/Peripherals/INS_Driver.cpp
+    UserApp/Peripherals/MS5837_Class.cpp
+    UserApp/Control/ChassisManager.cpp
+    UserApp/Control/PID_Controller.cpp
+    UserApp/Control/KinematicProfile.cpp
+    UserApp/Control/CoordinateManager.cpp
     micro_ros_stm32cubemx_utils/extra_sources/microros_transports/dma_transport.c
 )
 

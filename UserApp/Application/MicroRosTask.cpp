@@ -1,12 +1,7 @@
 #include "MicroRosTask.hpp"
 #include "GlobalContext.hpp"
-
-using namespace auv::device;
-using namespace auv::control;
 #include "FreeRTOS.h"
 #include "task.h"
-#include "CoordinateManager.hpp"
-
 #include <rcl/error_handling.h>
 #include <rcl/rcl.h>
 #include <rclc/executor.h>
@@ -18,7 +13,6 @@ using namespace auv::control;
 #include <std_msgs/msg/float32_multi_array.h>
 #include <std_msgs/msg/u_int32.h>
 #include <std_msgs/msg/u_int8.h>
-
 #include <zit6_interfaces/msg/zit_setpoint.h>
 #include <zit6_interfaces/msg/zit_status.h>
 #include <zit6_interfaces/msg/zit_pid.h>
@@ -35,7 +29,7 @@ void *microros_reallocate(void *ptr, size_t new_size, void *state);
 void *microros_zero_allocate(size_t number_of_elements, size_t size_t_of_element, void *state);
 }
 
-// --- micro-ROS 句柄与全局变量 ---
+// --- micro-ROS 实体 ---
 static rclc_support_t support;
 static rcl_node_t node;
 static rclc_executor_t executor;
@@ -57,8 +51,8 @@ namespace {
 void onZitPid(const void *msgin) {
     const auto *msg = (const zit6_interfaces__msg__ZitPid *)msgin;
     if (!std::isfinite(msg->kp) || !std::isfinite(msg->ki) || !std::isfinite(msg->kd)) return;
-    chassis.configurePID(msg->axis, msg->is_pos_ring, msg->kp, msg->ki, msg->kd, msg->i_limit, msg->out_limit);
-    if (msg->is_pos_ring) chassis.configureProfile(msg->axis, msg->max_v, msg->max_a);
+    auv::control::chassis.configurePID(msg->axis, msg->is_pos_ring, msg->kp, msg->ki, msg->kd, msg->i_limit, msg->out_limit);
+    if (msg->is_pos_ring) auv::control::chassis.configureProfile(msg->axis, msg->max_v, msg->max_a);
 }
 
 void onZitSetpoint(const void *msgin) {
@@ -81,15 +75,17 @@ void onZitSetpoint(const void *msgin) {
         if (!is_body) auv::control::CoordinateManager::worldToBody(nav.yaw, val[0], val[1], fx, fy);
         float forces[4] = {fx, fy, val[2], val[3]};
         taskENTER_CRITICAL();
-        chassis.setActuatorForces(forces);
-        float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw}, actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
-        chassis.setControlLevel(auv::ControlLevel::ACTUATOR, actual_p, actual_v);
+        auv::control::chassis.setActuatorForces(forces);
+        float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw};
+        float actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
+        auv::control::chassis.setControlLevel(auv::ControlLevel::ACTUATOR, actual_p, actual_v);
         taskEXIT_CRITICAL();
     } else if (level == 1) { // VEL
         taskENTER_CRITICAL();
         for (int i = 0; i < 4; i++) target_p[i] = val[i];
-        float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw}, actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
-        chassis.setControlLevel(auv::ControlLevel::VELOCITY, actual_p, actual_v);
+        float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw};
+        float actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
+        auv::control::chassis.setControlLevel(auv::ControlLevel::VELOCITY, actual_p, actual_v);
         taskEXIT_CRITICAL();
     } else if (level == 0) { // POS
         taskENTER_CRITICAL();
@@ -103,8 +99,9 @@ void onZitSetpoint(const void *msgin) {
         } else {
             for (int i = 0; i < 4; i++) if (mask & (1 << i)) target_p[i] = val[i];
         }
-        float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw}, actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
-        chassis.setControlLevel(auv::ControlLevel::POSITION, actual_p, actual_v);
+        float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw};
+        float actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
+        auv::control::chassis.setControlLevel(auv::ControlLevel::POSITION, actual_p, actual_v);
         taskEXIT_CRITICAL();
     }
 }
@@ -125,11 +122,11 @@ void onInsCommand(const void *msgin) {
     const auto *message = static_cast<const std_msgs__msg__UInt8 *>(msgin);
     if (message == nullptr) return;
     switch (message->data) {
-        case 1: ins_driver.setDvlPower(true); break;
-        case 2: ins_driver.setDvlPower(false); break;
-        case 3: ins_driver.restart(); break;
-        case 4: ins_driver.resetPosition(); break;
-        case 5: ins_driver.setInitialPosition(30.0, 120.0); break;
+        case 1: auv::device::ins_driver.setDvlPower(true); break;
+        case 2: auv::device::ins_driver.setDvlPower(false); break;
+        case 3: auv::device::ins_driver.restart(); break;
+        case 4: auv::device::ins_driver.resetPosition(); break;
+        case 5: auv::device::ins_driver.setInitialPosition(30.0, 120.0); break;
     }
 }
 
@@ -162,7 +159,7 @@ void UserApp_MicroRosTask(void *argument) {
     rcutils_set_default_allocator(&allocator);
     rcl_allocator_t rcl_allocator = rcl_get_default_allocator();
 
-    uint32_t last_hbt_pub_tick = 0, last_vel_pub_tick = 0, last_thr_pub_tick = 0, last_pos_pub_tick = 0, last_status_pub_tick = 0, last_pid_pub_tick = 0;
+    uint32_t last_hbt_pub_tick = 0, last_vel_pub_tick = 0, last_thr_pub_tick = 0, last_pos_pub_tick = 0, last_status_pub_tick = 0;
     enum uros_state { WAITING_AGENT, AGENT_CONNECTED } state = WAITING_AGENT;
 
     for (;;) {
@@ -172,7 +169,6 @@ void UserApp_MicroRosTask(void *argument) {
                 if (RCL_RET_OK == rclc_support_init(&support, 0, NULL, &rcl_allocator)) {
                     rmw_uros_sync_session(100);
                     rclc_node_init_default(&node, "zit6_node", "", &support);
-
                     std_msgs__msg__Float32MultiArray__init(&pos_fb_msg); pos_fb_msg.data.data = pos_buf; pos_fb_msg.data.size = 4; pos_fb_msg.data.capacity = 4;
                     std_msgs__msg__Float32MultiArray__init(&vel_fb_msg); vel_fb_msg.data.data = vel_buf; vel_fb_msg.data.size = 4; vel_fb_msg.data.capacity = 4;
                     std_msgs__msg__Float32MultiArray__init(&thr_fb_msg); thr_fb_msg.data.data = thr_buf; thr_fb_msg.data.size = 4; thr_fb_msg.data.capacity = 4;
@@ -199,24 +195,12 @@ void UserApp_MicroRosTask(void *argument) {
                 }
             } else vTaskDelay(pdMS_TO_TICKS(100));
         } else {
-            static uint32_t last_ping_ms = 0;
-            static uint8_t ping_fail_count = 0;
-            if (now_ms - last_ping_ms >= 2000) {
-                last_ping_ms = now_ms;
-                if (RCL_RET_OK != rmw_uros_ping_agent(500, 1)) { 
-                    ping_fail_count++;
-                    if (ping_fail_count >= 3) {
-                        cleanupMicroRos(); 
-                        state = WAITING_AGENT; 
-                        ping_fail_count = 0;
-                        continue;
-                    }
-                } else {
-                    ping_fail_count = 0;
-                }
-            }
-            
-            rclc_executor_spin_some(&executor, RCL_MS_TO_NS(1));
+            static uint32_t last_pid_pub_tick = 0;
+            // Robust ping: 500ms timeout, 3 failures
+            if (RCL_RET_OK != rmw_uros_ping_agent(500, 3)) {
+                cleanupMicroRos(); state = WAITING_AGENT;
+            } else {
+                rclc_executor_spin_some(&executor, RCL_MS_TO_NS(1));
                 if (now_ms - last_hbt_pub_tick >= 1000) { last_hbt_pub_tick = now_ms; node_heartbeat_msg.data = now_ms; rcl_publish(&zithbt_pub, &node_heartbeat_msg, NULL); }
                 if (now_ms - last_vel_pub_tick >= 20) { last_vel_pub_tick = now_ms; auto nav = shared::snapshotNavState(); vel_buf[0] = nav.vx; vel_buf[1] = nav.vy; vel_buf[2] = nav.vz; vel_buf[3] = nav.vyaw; rcl_publish(&vel_pub, &vel_fb_msg, NULL); }
                 if (now_ms - last_thr_pub_tick >= 33) { last_thr_pub_tick = now_ms; taskENTER_CRITICAL(); for (int i = 0; i < 4; i++) thr_buf[i] = last_output_forces[i]; taskEXIT_CRITICAL(); rcl_publish(&thr_pub, &thr_fb_msg, NULL); }
@@ -224,19 +208,22 @@ void UserApp_MicroRosTask(void *argument) {
                 if (now_ms - last_status_pub_tick >= 100) {
                     last_status_pub_tick = now_ms; auv::NavState nav = shared::snapshotNavState();
                     taskENTER_CRITICAL();
-                    status_msg.is_armed = is_system_armed; status_msg.arm_mode = (uint8_t)last_arm_heartbeat_data; status_msg.control_level = (uint8_t)chassis.getControlLevel();
-                    status_msg.ins_state = nav.imu_state; status_msg.navigation_ready = shared::isNavigationValid(nav);
-                    for (int i = 0; i < 4; i++) status_msg.forces[i] = last_output_forces[i];
-                    status_msg.cycle_time_ms = last_dt_ms; rcl_publish(&status_pub, &status_msg, NULL);
+                    status_msg.is_armed = is_system_armed; status_msg.arm_mode = (uint8_t)last_arm_heartbeat_data; status_msg.control_level = (uint8_t)auv::control::chassis.getControlLevel();
+                    status_msg.ins_state = nav.imu_state; status_msg.navigation_ready = shared::isNavigationValid(nav); for (int i = 0; i < 4; i++) status_msg.forces[i] = last_output_forces[i];
+                    status_msg.cycle_time_ms = (float)last_dt_ms; status_msg.battery_voltage = 0.0f; status_msg.error_flags = 0;
                     taskEXIT_CRITICAL();
+                    rcl_publish(&status_pub, &status_msg, NULL);
                 }
                 if (now_ms - last_pid_pub_tick >= 1000) {
                     last_pid_pub_tick = now_ms;
                     for (int i = 0; i < 4; i++) {
-                        auto p_cfg = chassis.getPIDConfig(i, true); pid_status_msg.pos_kp[i] = p_cfg.kp; chassis.getProfileLimits(i, pid_status_msg.pos_max_v[i], pid_status_msg.pos_max_a[i]); pid_status_msg.pos_out_limit[i] = p_cfg.output_limit;
-                        auto v_cfg = chassis.getPIDConfig(i, false); pid_status_msg.vel_kp[i] = v_cfg.kp; pid_status_msg.vel_ki[i] = v_cfg.ki; pid_status_msg.vel_kd[i] = v_cfg.kd; pid_status_msg.vel_i_limit[i] = v_cfg.i_limit; pid_status_msg.vel_out_limit[i] = v_cfg.output_limit;
+                        auto p_cfg = auv::control::chassis.getPIDConfig(i, true);
+                        pid_status_msg.pos_kp[i] = p_cfg.kp; auv::control::chassis.getProfileLimits(i, pid_status_msg.pos_max_v[i], pid_status_msg.pos_max_a[i]); pid_status_msg.pos_out_limit[i] = p_cfg.output_limit;
+                        auto v_cfg = auv::control::chassis.getPIDConfig(i, false);
+                        pid_status_msg.vel_kp[i] = v_cfg.kp; pid_status_msg.vel_ki[i] = v_cfg.ki; pid_status_msg.vel_kd[i] = v_cfg.kd; pid_status_msg.vel_i_limit[i] = v_cfg.i_limit; pid_status_msg.vel_out_limit[i] = v_cfg.output_limit;
                     }
                     rcl_publish(&pid_status_pub, &pid_status_msg, NULL);
+                }
             }
         }
         vTaskDelay(pdMS_TO_TICKS(1));
