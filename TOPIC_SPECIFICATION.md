@@ -24,7 +24,8 @@
 - `uint8 control_key`：控制模式与标志位组合
     - 低2位（bits0-1）：模式（0=POS位置, 1=VEL速度, 2=FORCE推力, 3=保留）
     - Bit4 (0x10)：目标为机体系（body）坐标；未置位则为世界系（world）
-    - Bit5 (0x20)：增量模式（表示 x/y/z/yaw 为相对量而非绝对量）
+    - Bit5 (0x20)：增量模式（表示 x/y/z/yaw 为
+    相对量而非绝对量）
 
 - `uint8 type_mask`：轴掩码（按位）
     - 1：X轴，2：Y轴，4：Z轴，8：Yaw（偏航）
@@ -82,8 +83,13 @@
 ### 2.1 `ZitStatus` 消息定义与字段说明
 - `bool is_armed`：是否已解锁（允许执行推力输出）
 
+- `uint8 arm_mode`：解锁模式
+    - 0: DEFAULT（默认模式，需导航就绪），3: REMOTE（遥控模式，绕过导航就绪检查）
+
 - `uint8 control_level`：当前控制层级
     - 0: NONE（无人控/安全停），1: POS（位置环），2: VEL（速度环），3: FORCE（推力环）
+
+- `uint8 ins_state`：惯导内部状态 (0:待机, 1:粗对准, 2:精对准, 3:SINS/GPS/DVL, 4:SINS/DVL, 5:MRU)
 
 - `bool navigation_ready`：导航准备就绪（惯导、DVL、水声或其他定位子系统健康并对准）
 

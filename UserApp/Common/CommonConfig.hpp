@@ -37,7 +37,7 @@ struct NavState {
     float vyaw = 0.0f;   ///< 航向角速度 (Yaw rate, rad/s)
 
     // 状态标志
-    uint8_t imu_state = 0; ///< 惯导模式 (0:初始化, 1:粗对准, 2:精对准, 3:纯惯导...)
+    uint8_t imu_state = 0; ///< 惯导模式 (0:待机, 1:粗对准, 2:精对准, 3:SINS/GPS/DVL, 4:SINS/DVL, 5:MRU)
     uint8_t dvl_state = 0; ///< DVL有效性标志 (1:有效, 0:无效)
     double lat = 0.0;      ///< 纬度 (Latitude, deg)
     double lon = 0.0;      ///< 经度 (Longitude, deg)
