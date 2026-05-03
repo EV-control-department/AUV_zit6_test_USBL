@@ -46,8 +46,8 @@ private:
     bool receive(uint8_t *pData, uint16_t Size);
 
     inline int8_t read8(uint8_t addr);
-    inline int16_t read16(uint8_t addr);
-    inline int32_t read32(uint8_t addr);
+    inline bool read16(uint8_t addr, uint16_t &out_data);
+    inline bool read32(uint8_t addr, uint32_t &out_data);
     uint8_t crc4(uint16_t n_prom[]);
     void calculate();
 public:
@@ -55,7 +55,7 @@ public:
 public:
     void Init(void);
 
-    void Read();
+    bool Read();
     void Depth(float *p);
     
     inline void altitude(float *p);

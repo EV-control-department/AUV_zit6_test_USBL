@@ -24,7 +24,13 @@ void MS5837::Init(void)
     osDelay(10);  
 
     for (uint8_t i = 0; i < 7; i++) {
-        m_MS5837_values.C[i] = read16(MS5837_PROM_READ + (i * 2));
+        uint16_t c_val = 0;
+        if (read16(MS5837_PROM_READ + (i * 2), c_val)) {
+            m_MS5837_values.C[i] = c_val;
+        } else {
+            is_connected = false;
+            return;
+        }
         osDelay(20);
     }
     uint8_t crcRead       = m_MS5837_values.C[0] >> 12;
@@ -48,24 +54,24 @@ inline int8_t MS5837::read8(uint8_t addr)
     return data;
 }
 
-inline int16_t MS5837::read16(uint8_t addr)
+inline bool MS5837::read16(uint8_t addr, uint16_t &out_data)
 {
     uint8_t dataArr[2] = {0, 0};
-    transmitByte(&addr);
+    if (!transmitByte(&addr)) return false;
     osDelay(20);
-    receive(dataArr, 2);
-    uint16_t data = (dataArr[0] << 8) | dataArr[1];
-    return data;
+    if (!receive(dataArr, 2)) return false;
+    out_data = (dataArr[0] << 8) | dataArr[1];
+    return true;
 }
 
-inline int32_t MS5837::read32(uint8_t addr)
+inline bool MS5837::read32(uint8_t addr, uint32_t &out_data)
 {
     uint8_t dataArr[4] = {0, 0, 0, 0};
-    transmitByte(&addr);
+    if (!transmitByte(&addr)) return false;
     osDelay(20);
-    receive(dataArr, 4);
-    uint32_t data = (dataArr[0] << 24) | (dataArr[1] << 16) | (dataArr[2] << 8) | dataArr[3];
-    return data;
+    if (!receive(dataArr, 4)) return false;
+    out_data = (dataArr[0] << 24) | (dataArr[1] << 16) | (dataArr[2] << 8) | dataArr[3];
+    return true;
 }
 
 uint8_t MS5837::crc4(uint16_t n_prom[])
@@ -163,23 +169,27 @@ void MS5837::calculate()
 #endif
 }
 
-void MS5837::Read()
+bool MS5837::Read()
 {
     uint8_t reset_cmd = MS5837_CONVERT_D1_8192;
-    transmitByte(&reset_cmd);
+    if (!transmitByte(&reset_cmd)) return false;
     osDelay(20);
 
-    m_MS5837_values.D1 = read32(MS5837_ADC_READ);
-    m_MS5837_values.D1 = m_MS5837_values.D1 >> 8;
+    uint32_t d1_raw = 0;
+    if (!read32(MS5837_ADC_READ, d1_raw)) return false;
+    m_MS5837_values.D1 = d1_raw >> 8;
+    
     osDelay(20);
     reset_cmd = MS5837_CONVERT_D2_8192;
-    transmitByte(&reset_cmd);
+    if (!transmitByte(&reset_cmd)) return false;
     osDelay(20);
 
-    m_MS5837_values.D2 = read32(MS5837_ADC_READ);
-    m_MS5837_values.D2 = m_MS5837_values.D2 >> 8;
+    uint32_t d2_raw = 0;
+    if (!read32(MS5837_ADC_READ, d2_raw)) return false;
+    m_MS5837_values.D2 = d2_raw >> 8;
 
     calculate();
+    return true;
 }
 
 void MS5837::Depth(float *p)

@@ -331,10 +331,11 @@ void UserApp_IICTask(void *argument) {
   
   for (;;) {
     if (depth_sensor.is_connected) {
-      depth_sensor.Read();
-      float d = 0.0f;
-      depth_sensor.Depth(&d);
-      current_depth_z = d;
+      if (depth_sensor.Read()) {
+        float d = 0.0f;
+        depth_sensor.Depth(&d);
+        current_depth_z = d;
+      }
     } else {
       // Retry init if not connected
       depth_sensor.Init();
