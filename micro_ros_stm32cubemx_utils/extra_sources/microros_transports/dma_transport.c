@@ -65,6 +65,8 @@ bool cubemx_transport_open(struct uxrCustomTransport * transport){
     tx_tail = 0;
     tx_last_len = 0;
     tx_busy = false;
+    dma_head = 0;
+    dma_tail = 0;
     return true;
 }
 

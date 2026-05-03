@@ -18,17 +18,18 @@ namespace device {
 class MotionController_Driver {
 public:
     struct __attribute__((packed)) Packet {
-        uint8_t head[2] = {0xFA, 0xAF};
-        uint8_t id = 0x01; // CMD_NORMAL_MODE
+        uint8_t head[2];
+        uint8_t id;
         float Fx;
         float Fy;
         float Fz;
         float Fyaw;
         float Fpitch;
         float Froll;
-        float Angle_servo = 0;
-        uint8_t tail[2] = {0xFB, 0xBF};
+        float Angle_servo;
+        uint8_t tail[2];
     };
+
 
     MotionController_Driver(UART_HandleTypeDef* huart, Packet* ext_pkt) : huart_(huart), pkt_ptr_(ext_pkt) {}
     MotionController_Driver(UART_HandleTypeDef* huart) : huart_(huart), pkt_ptr_(&pkt_internal_) {}
@@ -38,16 +39,17 @@ public:
      * @param fx, fy, fz, fyaw 4-DOF 目标推力/力矩
      */
     void publishThrust(float fx, float fy, float fz, float fyaw, float fp = 0, float fr = 0) {
-        pkt_ptr_->Fx = fx;
-        pkt_ptr_->Fy = fy;
-        pkt_ptr_->Fz = fz;
-        pkt_ptr_->Fyaw = fyaw;
-        pkt_ptr_->Fpitch = fp;
-        pkt_ptr_->Froll = fr;
+        memcpy(&pkt_ptr_->Fx, &fx, 4);
+        memcpy(&pkt_ptr_->Fy, &fy, 4);
+        memcpy(&pkt_ptr_->Fz, &fz, 4);
+        memcpy(&pkt_ptr_->Fyaw, &fyaw, 4);
+        memcpy(&pkt_ptr_->Fpitch, &fp, 4);
+        memcpy(&pkt_ptr_->Froll, &fr, 4);
 
-        // 使用 DMA 传输，先刷写 D-Cache 以确保 DMA 拿到最新数据
-        SCB_CleanDCache_by_Addr((uint32_t*)pkt_ptr_, sizeof(Packet));
+
+        // 因为 MPU 已经将此区域设为 Non-Cacheable，所以不需要刷 Cache，直接发送即可
         HAL_UART_Transmit_DMA(huart_, (uint8_t*)pkt_ptr_, sizeof(Packet));
+
     }
 
 private:

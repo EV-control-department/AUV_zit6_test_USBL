@@ -200,12 +200,19 @@ void UserApp_MicroRosTask(void *argument) {
             } else vTaskDelay(pdMS_TO_TICKS(100));
         } else {
             static uint32_t last_ping_ms = 0;
+            static uint8_t ping_fail_count = 0;
             if (now_ms - last_ping_ms >= 2000) {
                 last_ping_ms = now_ms;
-                if (RCL_RET_OK != rmw_uros_ping_agent(100, 1)) { 
-                    cleanupMicroRos(); 
-                    state = WAITING_AGENT; 
-                    continue;
+                if (RCL_RET_OK != rmw_uros_ping_agent(500, 1)) { 
+                    ping_fail_count++;
+                    if (ping_fail_count >= 3) {
+                        cleanupMicroRos(); 
+                        state = WAITING_AGENT; 
+                        ping_fail_count = 0;
+                        continue;
+                    }
+                } else {
+                    ping_fail_count = 0;
                 }
             }
             
