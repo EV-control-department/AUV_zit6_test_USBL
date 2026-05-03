@@ -8,6 +8,7 @@
 #include <rclc/rclc.h>
 #include <rcutils/allocator.h>
 #include <rmw_microros/rmw_microros.h>
+#include "SoftWatchdog.hpp"
 
 #include <std_msgs/msg/bool.h>
 #include <std_msgs/msg/float32_multi_array.h>
@@ -200,6 +201,7 @@ void UserApp_MicroRosTask(void *argument) {
             if (RCL_RET_OK != rmw_uros_ping_agent(500, 3)) {
                 cleanupMicroRos(); state = WAITING_AGENT;
             } else {
+                auv::device::SoftWatchdog::getInstance().feed(auv::device::SoftWatchdog::Component::MICROROS);
                 rclc_executor_spin_some(&executor, RCL_MS_TO_NS(1));
                 if (now_ms - last_hbt_pub_tick >= 1000) { last_hbt_pub_tick = now_ms; node_heartbeat_msg.data = now_ms; rcl_publish(&zithbt_pub, &node_heartbeat_msg, NULL); }
                 if (now_ms - last_vel_pub_tick >= 20) { last_vel_pub_tick = now_ms; auto nav = shared::snapshotNavState(); vel_buf[0] = nav.vx; vel_buf[1] = nav.vy; vel_buf[2] = nav.vz; vel_buf[3] = nav.vyaw; rcl_publish(&vel_pub, &vel_fb_msg, NULL); }

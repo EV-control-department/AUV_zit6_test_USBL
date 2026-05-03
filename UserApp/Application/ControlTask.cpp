@@ -2,6 +2,7 @@
 #include "GlobalContext.hpp"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "SoftWatchdog.hpp"
 #include <string.h>
 
 using namespace auv::device;
@@ -19,13 +20,16 @@ void UserApp_ControlTask(void *argument) {
 
     // 2. 驱动初始化
     ins_driver.init();
+    SoftWatchdog::getInstance().init();
     
     TickType_t xLastWakeTime = xTaskGetTickCount();
     uint32_t last_tick = HAL_GetTick();
     
     for (;;) {
-        // --- 硬件喂狗 ---
-        HAL_IWDG_Refresh(&hiwdg1);
+        // --- 硬件喂狗 (受软件看门狗保护) ---
+        if (SoftWatchdog::getInstance().check()) {
+            HAL_IWDG_Refresh(&hiwdg1);
+        }
 
         uint32_t now = HAL_GetTick();
         last_dt_ms = (float)(now - last_tick);

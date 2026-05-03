@@ -1,4 +1,5 @@
 #include "INS_Driver.hpp"
+#include "SoftWatchdog.hpp"
 #include <cmath>
 
 namespace auv {
@@ -184,6 +185,7 @@ void INS_Driver::decodePacket(NavState& s) {
     s.dvl_state = (packet_buf_[115] & 0x02) ? 1 : 0; 
     
     s.timestamp = HAL_GetTick();
+    auv::device::SoftWatchdog::getInstance().feed(auv::device::SoftWatchdog::Component::INS);
 
     // 更新内部缓存
     state_ = s;

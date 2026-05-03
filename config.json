@@ -1,0 +1,8 @@
+{
+  "soft_watchdog": {
+    "timeout_ms": 3000,
+    "check_microros": true,
+    "check_ins": false,
+    "check_depth": true
+  }
+}

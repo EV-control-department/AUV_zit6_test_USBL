@@ -2,6 +2,7 @@
 #include "GlobalContext.hpp"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "SoftWatchdog.hpp"
 
 void UserApp_IICTask(void *argument) {
     auv::device::depth_sensor.Init();
@@ -12,6 +13,7 @@ void UserApp_IICTask(void *argument) {
                 float d = 0.0f;
                 auv::device::depth_sensor.Depth(&d);
                 current_depth_z = d;
+                auv::device::SoftWatchdog::getInstance().feed(auv::device::SoftWatchdog::Component::DEPTH);
             }
         } else {
             // Retry init if not connected

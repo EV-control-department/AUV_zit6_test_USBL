@@ -18,6 +18,14 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
 endif()
 
+# Generate config header from JSON
+execute_process(
+    COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_config.py 
+            ${CMAKE_CURRENT_SOURCE_DIR}/config.json 
+            ${CMAKE_CURRENT_SOURCE_DIR}/UserApp/Common/SoftWatchdogConfig.hpp
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
 # Set the project name
 set(CMAKE_PROJECT_NAME AUV_zit6)
 
@@ -62,6 +70,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     UserApp/Application/MicroRosTask.cpp
     UserApp/Application/IICTask.cpp
     UserApp/Common/GlobalContext.cpp
+    UserApp/Common/SoftWatchdog.cpp
     UserApp/Peripherals/INS_Driver.cpp
     UserApp/Peripherals/MS5837_Class.cpp
     UserApp/Control/ChassisManager.cpp
