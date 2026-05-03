@@ -71,6 +71,13 @@ const osThreadAttr_t hardware_bridge_attributes = {
   .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityHigh,
 };
+/* Definitions for iic_task */
+osThreadId_t iic_taskHandle;
+const osThreadAttr_t iic_task_attributes = {
+  .name = "iic_task",
+  .stack_size = 512 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
 /* Definitions for imu_queue */
 osMessageQueueId_t imu_queueHandle;
 const osMessageQueueAttr_t imu_queue_attributes = {
@@ -95,6 +102,7 @@ void *microros_zero_allocate(size_t number_of_elements, size_t size_of_element,
 
 void Entry_MicroRosTask(void *argument);
 void Entry_ControlTask(void *argument);
+void Entry_IICTask(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -146,6 +154,9 @@ void MX_FREERTOS_Init(void) {
   /* creation of hardware_bridge */
   hardware_bridgeHandle = osThreadNew(Entry_ControlTask, NULL, &hardware_bridge_attributes);
 
+  /* creation of iic_task */
+  iic_taskHandle = osThreadNew(Entry_IICTask, NULL, &iic_task_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -182,6 +193,24 @@ void Entry_ControlTask(void *argument)
   /* USER CODE BEGIN Entry_ControlTask */
   UserApp_ControlTask(argument);
   /* USER CODE END Entry_ControlTask */
+}
+
+/* USER CODE BEGIN Header_Entry_IICTask */
+/**
+* @brief Function implementing the iic_task thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_Entry_IICTask */
+void Entry_IICTask(void *argument)
+{
+  /* USER CODE BEGIN Entry_IICTask */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END Entry_IICTask */
 }
 
 /* Private application code --------------------------------------------------*/
