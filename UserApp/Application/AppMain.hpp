@@ -15,6 +15,11 @@ void UserApp_MicroRosTask(void *argument);
  */
 void UserApp_ControlTask(void *argument);
 
+/**
+ * @brief IIC传感器任务入口 (由 freertos.c 调用)
+ */
+void UserApp_IICTask(void *argument);
+
 #ifdef __cplusplus
 }
 #endif

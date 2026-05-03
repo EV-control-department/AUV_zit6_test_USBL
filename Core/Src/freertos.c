@@ -205,11 +205,7 @@ void Entry_ControlTask(void *argument)
 void Entry_IICTask(void *argument)
 {
   /* USER CODE BEGIN Entry_IICTask */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
+  UserApp_IICTask(argument);
   /* USER CODE END Entry_IICTask */
 }
 

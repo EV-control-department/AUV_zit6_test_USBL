@@ -1,0 +1,8 @@
+/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build2/CMakeFiles/AUV_zit6.dir
+/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build2/CMakeFiles/microros_build.dir
+/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build2/CMakeFiles/edit_cache.dir
+/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build2/CMakeFiles/rebuild_cache.dir
+/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build2/cmake/stm32cubemx/CMakeFiles/STM32_Drivers.dir
+/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build2/cmake/stm32cubemx/CMakeFiles/FreeRTOS.dir
+/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build2/cmake/stm32cubemx/CMakeFiles/edit_cache.dir
+/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/build2/cmake/stm32cubemx/CMakeFiles/rebuild_cache.dir

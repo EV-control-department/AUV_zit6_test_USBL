@@ -10,6 +10,8 @@
 #include <cstdlib>
 #include <cstring>
 
+#include "MS5837_Class.h"
+
 // HAL与系统头文件
 #include "stm32h7xx_hal.h"
 
@@ -48,6 +50,7 @@ void *microros_zero_allocate(size_t number_of_elements,
 
 void UserApp_ControlTask(void *argument);
 void UserApp_MicroRosTask(void *argument);
+void UserApp_IICTask(void *argument);
 }
 
 extern "C" UART_HandleTypeDef huart7;
@@ -65,6 +68,8 @@ static uint32_t last_received_seq = 0;
 static auv::INS_Driver ins_driver(&huart7, &huart7);
 static auv::control::ChassisManager chassis;
 static auv::MotionController_Driver motor_driver(&huart6);
+static MS5837 depth_sensor(&hi2c1);
+static float current_depth_z = 0.0f;
 
 // --- 安全 ARM 状态机变量 ---
 static bool is_system_armed = false;
@@ -232,6 +237,10 @@ void UserApp_ControlTask(void *argument) {
     last_tick = now;
     auv::NavState nav = snapshotNavState();
     ins_driver.update(nav);
+    
+    // Inject MS5837 depth data as the Z-axis position
+    nav.z = current_depth_z;
+
     taskENTER_CRITICAL();
     shared_nav_state = nav;
     taskEXIT_CRITICAL();
@@ -314,6 +323,23 @@ void UserApp_ControlTask(void *argument) {
     }
 
     vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(10));
+  }
+}
+
+void UserApp_IICTask(void *argument) {
+  depth_sensor.Init();
+  
+  for (;;) {
+    if (depth_sensor.is_connected) {
+      depth_sensor.Read();
+      float d = 0.0f;
+      depth_sensor.Depth(&d);
+      current_depth_z = d;
+    } else {
+      // Retry init if not connected
+      depth_sensor.Init();
+    }
+    vTaskDelay(pdMS_TO_TICKS(100)); // 10Hz sampling
   }
 }
 

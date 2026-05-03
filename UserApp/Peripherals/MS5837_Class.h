@@ -1,8 +1,9 @@
 #ifndef __MS5837_CLASS_H__
 #define __MS5837_CLASS_H__
 
-#include "user_main.h"
-#include "I2C_Class.h"
+#include "main.h"
+#include "i2c.h"
+#include <math.h>
 
 #define MS5837_ADDR            0x76 << 1
 #define MS5837_RESET           0x1E
@@ -26,9 +27,11 @@ typedef struct {
     uint32_t D2;
 } MS5837_values;
 
-class MS5837 : public MCU_I2C
+class MS5837
 {
 private:
+    I2C_HandleTypeDef* hi2c;
+    uint8_t slave_address;
     // MS5837 model(Default MS5837_30BA)
     uint8_t model;
     // Fluid density (Default 1029)
@@ -38,6 +41,10 @@ private:
     float pressure;
     MS5837_values m_MS5837_values;
 private:
+    bool transmitByte(uint8_t *pData);
+    bool receiveByte(uint8_t *pData);
+    bool receive(uint8_t *pData, uint16_t Size);
+
     inline int8_t read8(uint8_t addr);
     inline int16_t read16(uint8_t addr);
     inline int32_t read32(uint8_t addr);

@@ -1,15 +1,31 @@
 #include "MS5837_Class.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include "cmsis_os2.h"
+
+bool MS5837::transmitByte(uint8_t *pData) {
+    return HAL_I2C_Master_Transmit(hi2c, slave_address, pData, 1, 100) == HAL_OK;
+}
+
+bool MS5837::receiveByte(uint8_t *pData) {
+    return HAL_I2C_Master_Receive(hi2c, slave_address, pData, 1, 100) == HAL_OK;
+}
+
+bool MS5837::receive(uint8_t *pData, uint16_t Size) {
+    return HAL_I2C_Master_Receive(hi2c, slave_address, pData, Size, 100) == HAL_OK;
+}
+
 
 void MS5837::Init(void)
 {
     uint8_t reset_cmd = MS5837_RESET;
 
-    MCU_I2C::transmitByte(&reset_cmd);
-    Init_Delay(10);  
+    transmitByte(&reset_cmd);
+    osDelay(10);  
 
     for (uint8_t i = 0; i < 7; i++) {
         m_MS5837_values.C[i] = read16(MS5837_PROM_READ + (i * 2));
-        Init_Delay(20);
+        osDelay(20);
     }
     uint8_t crcRead       = m_MS5837_values.C[0] >> 12;
     uint8_t crcCalculated = crc4(m_MS5837_values.C);
@@ -26,18 +42,18 @@ void MS5837::Init(void)
 inline int8_t MS5837::read8(uint8_t addr)
 {
     uint8_t data = 0;
-    MCU_I2C::transmitByte(&addr);
-    Delay(20);
-    MCU_I2C::receiveByte(&data);
+    transmitByte(&addr);
+    osDelay(20);
+    receiveByte(&data);
     return data;
 }
 
 inline int16_t MS5837::read16(uint8_t addr)
 {
     uint8_t dataArr[2] = {0, 0};
-    MCU_I2C::transmitByte(&addr);
-    Delay(20);
-    MCU_I2C::receive(dataArr, 2);
+    transmitByte(&addr);
+    osDelay(20);
+    receive(dataArr, 2);
     uint16_t data = (dataArr[0] << 8) | dataArr[1];
     return data;
 }
@@ -45,9 +61,9 @@ inline int16_t MS5837::read16(uint8_t addr)
 inline int32_t MS5837::read32(uint8_t addr)
 {
     uint8_t dataArr[4] = {0, 0, 0, 0};
-    MCU_I2C::transmitByte(&addr);
-    Delay(20);
-    MCU_I2C::receive(dataArr, 4);
+    transmitByte(&addr);
+    osDelay(20);
+    receive(dataArr, 4);
     uint32_t data = (dataArr[0] << 24) | (dataArr[1] << 16) | (dataArr[2] << 8) | dataArr[3];
     return data;
 }
@@ -150,15 +166,15 @@ void MS5837::calculate()
 void MS5837::Read()
 {
     uint8_t reset_cmd = MS5837_CONVERT_D1_8192;
-    MCU_I2C::transmitByte(&reset_cmd);
-    Delay(20);
+    transmitByte(&reset_cmd);
+    osDelay(20);
 
     m_MS5837_values.D1 = read32(MS5837_ADC_READ);
     m_MS5837_values.D1 = m_MS5837_values.D1 >> 8;
-    Delay(20);
+    osDelay(20);
     reset_cmd = MS5837_CONVERT_D2_8192;
-    MCU_I2C::transmitByte(&reset_cmd);
-    Delay(20);
+    transmitByte(&reset_cmd);
+    osDelay(20);
 
     m_MS5837_values.D2 = read32(MS5837_ADC_READ);
     m_MS5837_values.D2 = m_MS5837_values.D2 >> 8;
@@ -177,7 +193,7 @@ inline void MS5837::altitude(float *p)
 }
 
 MS5837::MS5837(I2C_HandleTypeDef *hi2c, uint8_t SLAVE_ADDRESS, uint16_t MemAddSize) 
-                : MCU_I2C(hi2c, SLAVE_ADDRESS, MemAddSize), model(MS5837_30BA), fluidDensity(1029)
+                : hi2c(hi2c), slave_address(SLAVE_ADDRESS), model(MS5837_30BA), fluidDensity(1029)
 {
 }
 
