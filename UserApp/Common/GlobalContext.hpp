@@ -18,6 +18,10 @@ extern IWDG_HandleTypeDef hiwdg1;
 extern I2C_HandleTypeDef hi2c1;
 }
 
+// --- DMA 缓冲区 extern ---
+extern uint8_t ins_rx_buffer[512];
+extern auv::device::MotionController_Driver::Packet motor_tx_packet;
+
 // --- 全局驱动实例 ---
 // 统一使用 auv::device 命名空间下的驱动
 namespace auv {

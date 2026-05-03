@@ -199,9 +199,17 @@ void UserApp_MicroRosTask(void *argument) {
                 }
             } else vTaskDelay(pdMS_TO_TICKS(100));
         } else {
-            if (RCL_RET_OK != rmw_uros_ping_agent(500, 3)) { cleanupMicroRos(); state = WAITING_AGENT; }
-            else {
-                rclc_executor_spin_some(&executor, RCL_MS_TO_NS(1));
+            static uint32_t last_ping_ms = 0;
+            if (now_ms - last_ping_ms >= 2000) {
+                last_ping_ms = now_ms;
+                if (RCL_RET_OK != rmw_uros_ping_agent(100, 1)) { 
+                    cleanupMicroRos(); 
+                    state = WAITING_AGENT; 
+                    continue;
+                }
+            }
+            
+            rclc_executor_spin_some(&executor, RCL_MS_TO_NS(1));
                 if (now_ms - last_hbt_pub_tick >= 1000) { last_hbt_pub_tick = now_ms; node_heartbeat_msg.data = now_ms; rcl_publish(&zithbt_pub, &node_heartbeat_msg, NULL); }
                 if (now_ms - last_vel_pub_tick >= 20) { last_vel_pub_tick = now_ms; auto nav = shared::snapshotNavState(); vel_buf[0] = nav.vx; vel_buf[1] = nav.vy; vel_buf[2] = nav.vz; vel_buf[3] = nav.vyaw; rcl_publish(&vel_pub, &vel_fb_msg, NULL); }
                 if (now_ms - last_thr_pub_tick >= 33) { last_thr_pub_tick = now_ms; taskENTER_CRITICAL(); for (int i = 0; i < 4; i++) thr_buf[i] = last_output_forces[i]; taskEXIT_CRITICAL(); rcl_publish(&thr_pub, &thr_fb_msg, NULL); }
@@ -222,7 +230,6 @@ void UserApp_MicroRosTask(void *argument) {
                         auto v_cfg = chassis.getPIDConfig(i, false); pid_status_msg.vel_kp[i] = v_cfg.kp; pid_status_msg.vel_ki[i] = v_cfg.ki; pid_status_msg.vel_kd[i] = v_cfg.kd; pid_status_msg.vel_i_limit[i] = v_cfg.i_limit; pid_status_msg.vel_out_limit[i] = v_cfg.output_limit;
                     }
                     rcl_publish(&pid_status_pub, &pid_status_msg, NULL);
-                }
             }
         }
         vTaskDelay(pdMS_TO_TICKS(1));

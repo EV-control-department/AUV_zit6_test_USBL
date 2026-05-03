@@ -108,7 +108,7 @@ int main(void)
   MX_USART3_UART_Init();
   MX_UART7_Init();
   MX_USART6_UART_Init();
-  // MX_IWDG1_Init();
+  MX_IWDG1_Init();
   /* USER CODE BEGIN 2 */
   HAL_UART_Transmit(&huart3, (uint8_t*)"System Booting...\r\n", 19, 100);
   /* USER CODE END 2 */
