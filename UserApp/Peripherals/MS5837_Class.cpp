@@ -3,6 +3,9 @@
 #include "task.h"
 #include "cmsis_os2.h"
 
+namespace auv {
+namespace device {
+
 bool MS5837::transmitByte(uint8_t *pData) {
     return HAL_I2C_Master_Transmit(hi2c, slave_address, pData, 1, 100) == HAL_OK;
 }
@@ -210,3 +213,6 @@ MS5837::MS5837(I2C_HandleTypeDef *hi2c, uint8_t SLAVE_ADDRESS, uint16_t MemAddSi
 MS5837::~MS5837()
 {
 }
+
+} // namespace device
+} // namespace auv

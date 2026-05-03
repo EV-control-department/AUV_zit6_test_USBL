@@ -27,6 +27,9 @@ typedef struct {
     uint32_t D2;
 } MS5837_values;
 
+namespace auv {
+namespace device {
+
 class MS5837
 {
 private:
@@ -63,6 +66,9 @@ public:
     MS5837(I2C_HandleTypeDef* hi2c, uint8_t SLAVE_ADDRESS = MS5837_ADDR, uint16_t MemAddSize = 0);
     ~MS5837();
 };
+
+} // namespace device
+} // namespace auv
 
 #endif
 

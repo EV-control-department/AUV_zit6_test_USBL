@@ -58,6 +58,10 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
   Core/Src/stm32h7xx_hal_msp.c
   Core/Src/stm32h7xx_hal_timebase_tim.c
   UserApp/Application/AppMain.cpp
+  UserApp/Common/GlobalContext.cpp
+  UserApp/Application/ControlTask.cpp
+  UserApp/Application/IICTask.cpp
+  UserApp/Application/MicroRosTask.cpp
   UserApp/Peripherals/INS_Driver.cpp
   UserApp/Peripherals/MS5837_Class.cpp
   UserApp/Control/ChassisManager.cpp

@@ -2,6 +2,7 @@
 #include <cmath>
 
 namespace auv {
+namespace device {
 
 void INS_Driver::init() {
     // 尝试启动 DMA 接收，如果失败则重试（防止上电初期串口噪声导致 ORE 锁死）
@@ -199,4 +200,5 @@ void INS_Driver::decodePacket(NavState& s) {
     frame_len_ = 0; 
 }
 
+} // namespace device
 } // namespace auv

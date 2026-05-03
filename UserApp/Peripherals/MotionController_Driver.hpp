@@ -5,6 +5,7 @@
 #include <string.h>
 
 namespace auv {
+namespace device {
 
 /**
  * @class MotionController_Driver
@@ -55,6 +56,7 @@ private:
     alignas(32) Packet pkt_internal_;
 };
 
+} // namespace device
 } // namespace auv
 
 #endif // MOTION_CONTROLLER_DRIVER_HPP

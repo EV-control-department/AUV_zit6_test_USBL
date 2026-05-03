@@ -12,6 +12,7 @@
 #include <cstring>
 
 namespace auv {
+namespace device {
 
 /**
  * @class INS_Driver
@@ -95,6 +96,7 @@ private:
     void decodePacket(NavState& state);
 };
 
+} // namespace device
 } // namespace auv
 
 #endif
