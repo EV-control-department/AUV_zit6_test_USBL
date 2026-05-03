@@ -65,9 +65,13 @@ static float last_output_forces[4] = {0.0f, 0.0f, 0.0f, 0.0f};
 static float last_dt_ms = 0.0f;
 static uint32_t last_received_seq = 0;
 
-static auv::INS_Driver ins_driver(&huart7, &huart7);
+// 将 DMA 缓冲区放在 D2 SRAM 中以获得最高性能和确定性
+__attribute__((section(".dma_buffer"))) static uint8_t ins_rx_buffer[512];
+__attribute__((section(".dma_buffer"))) static auv::MotionController_Driver::Packet motor_tx_packet;
+
+static auv::INS_Driver ins_driver(&huart7, &huart7, ins_rx_buffer, 512);
 static auv::control::ChassisManager chassis;
-static auv::MotionController_Driver motor_driver(&huart6);
+static auv::MotionController_Driver motor_driver(&huart6, &motor_tx_packet);
 static MS5837 depth_sensor(&hi2c1);
 static float current_depth_z = 0.0f;
 

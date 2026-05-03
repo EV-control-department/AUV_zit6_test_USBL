@@ -24,6 +24,9 @@ public:
      * @param rx_uart 接收数据的 UART 句柄 (通常开启 DMA)
      * @param tx_uart 发送指令的 UART 句柄
      */
+    INS_Driver(UART_HandleTypeDef* rx_uart, UART_HandleTypeDef* tx_uart, uint8_t* ext_rx_buf, uint16_t rx_buf_size)
+        : rx_port_(rx_uart, ext_rx_buf, rx_buf_size), tx_uart_(tx_uart) {}
+
     INS_Driver(UART_HandleTypeDef* rx_uart, UART_HandleTypeDef* tx_uart)
         : rx_port_(rx_uart, 512), tx_uart_(tx_uart) {}
 

@@ -47,7 +47,9 @@ static void start_next_tx(UART_HandleTypeDef* huart) {
 
 // UART TX Complete Callback
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart) {
-    // Only handle the instance assigned to micro-ROS
+    // 只有当回调来自于 micro-ROS 使用的串口时才处理
+    if (huart->Instance != USART2) return;
+
     // Update tx_tail using the length that was actually sent
     tx_tail = (tx_tail + tx_last_len) % UART_DMA_BUFFER_SIZE;
     tx_busy = false;

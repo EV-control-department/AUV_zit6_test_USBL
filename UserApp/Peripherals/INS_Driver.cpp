@@ -4,7 +4,11 @@
 namespace auv {
 
 void INS_Driver::init() {
-    rx_port_.startReceive();
+    // 尝试启动 DMA 接收，如果失败则重试（防止上电初期串口噪声导致 ORE 锁死）
+    for (int i = 0; i < 5; i++) {
+        if (rx_port_.startReceive()) break;
+        HAL_Delay(10);
+    }
     resetPosition();
 }
 
