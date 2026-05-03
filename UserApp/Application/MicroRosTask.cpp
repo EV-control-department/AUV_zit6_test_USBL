@@ -11,6 +11,7 @@
 #include "SoftWatchdog.hpp"
 
 #include <std_msgs/msg/bool.h>
+#include <std_msgs/msg/float32.h>
 #include <std_msgs/msg/float32_multi_array.h>
 #include <std_msgs/msg/u_int32.h>
 #include <std_msgs/msg/u_int8.h>
@@ -34,9 +35,11 @@ void *microros_zero_allocate(size_t number_of_elements, size_t size_t_of_element
 static rclc_support_t support;
 static rcl_node_t node;
 static rclc_executor_t executor;
-static rcl_subscription_t setpoint_sub, arm_sub, ins_cmd_sub, pid_sub;
+static rcl_subscription_t setpoint_sub, arm_sub, ins_cmd_sub, pid_sub, servo_sub, led_sub;
 static rcl_publisher_t pos_pub, vel_pub, thr_pub, zithbt_pub, status_pub, pid_status_pub;
 
+static std_msgs__msg__Float32 servo_msg;
+static std_msgs__msg__UInt8 led_msg;
 static std_msgs__msg__Float32MultiArray pos_fb_msg, vel_fb_msg, thr_fb_msg;
 static zit6_interfaces__msg__ZitSetpoint setpoint_msg;
 static zit6_interfaces__msg__ZitStatus status_msg;
@@ -131,6 +134,16 @@ void onInsCommand(const void *msgin) {
     }
 }
 
+void onServoCmd(const void *msgin) {
+    const auto *msg = (const std_msgs__msg__Float32 *)msgin;
+    auv::device::motor_driver.setServoAngle(msg->data);
+}
+
+void onLedCmd(const void *msgin) {
+    const auto *msg = (const std_msgs__msg__UInt8 *)msgin;
+    auv::device::motor_driver.setLightState(msg->data);
+}
+
 void cleanupMicroRos() {
     rclc_executor_fini(&executor);
     rcl_publisher_fini(&pos_pub, &node);
@@ -143,6 +156,8 @@ void cleanupMicroRos() {
     rcl_subscription_fini(&arm_sub, &node);
     rcl_subscription_fini(&ins_cmd_sub, &node);
     rcl_subscription_fini(&pid_sub, &node);
+    rcl_subscription_fini(&servo_sub, &node);
+    rcl_subscription_fini(&led_sub, &node);
     rcl_node_fini(&node);
     rclc_support_fini(&support);
     memset(&support, 0, sizeof(support));
@@ -173,7 +188,12 @@ void UserApp_MicroRosTask(void *argument) {
                     std_msgs__msg__Float32MultiArray__init(&pos_fb_msg); pos_fb_msg.data.data = pos_buf; pos_fb_msg.data.size = 4; pos_fb_msg.data.capacity = 4;
                     std_msgs__msg__Float32MultiArray__init(&vel_fb_msg); vel_fb_msg.data.data = vel_buf; vel_fb_msg.data.size = 4; vel_fb_msg.data.capacity = 4;
                     std_msgs__msg__Float32MultiArray__init(&thr_fb_msg); thr_fb_msg.data.data = thr_buf; thr_fb_msg.data.size = 4; thr_fb_msg.data.capacity = 4;
-                    std_msgs__msg__UInt32__init(&node_heartbeat_msg); std_msgs__msg__UInt8__init(&ins_cmd_msg); zit6_interfaces__msg__ZitStatus__init(&status_msg);
+                    std_msgs__msg__UInt32__init(&node_heartbeat_msg); 
+                    std_msgs__msg__UInt32__init(&arm_msg);
+                    std_msgs__msg__UInt8__init(&ins_cmd_msg); 
+                    std_msgs__msg__UInt8__init(&led_msg); 
+                    std_msgs__msg__Float32__init(&servo_msg);
+                    zit6_interfaces__msg__ZitStatus__init(&status_msg);
 
                     rclc_publisher_init_default(&pos_pub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray), "/zit6/state/pos");
                     rclc_publisher_init_default(&vel_pub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray), "/zit6/state/vel");
@@ -182,16 +202,20 @@ void UserApp_MicroRosTask(void *argument) {
                     rclc_publisher_init_default(&status_pub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(zit6_interfaces, msg, ZitStatus), "/zit6/state/status");
                     rclc_publisher_init_default(&pid_status_pub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(zit6_interfaces, msg, ZitPidStatus), "/zit6/state/pid_status");
 
+                    rclc_subscription_init_default(&led_sub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt8), "/zit6/cmd/light");
+                    rclc_subscription_init_default(&servo_sub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), "/zit6/cmd/servo");
                     rclc_subscription_init_default(&setpoint_sub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(zit6_interfaces, msg, ZitSetpoint), "/zit6/cmd/setpoint");
                     rclc_subscription_init_default(&arm_sub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt32), "/zit6/cmd/agxhbt");
                     rclc_subscription_init_default(&ins_cmd_sub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt8), "/zit6/cmd/ins");
                     rclc_subscription_init_default(&pid_sub, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(zit6_interfaces, msg, ZitPid), "/zit6/cmd/pid");
 
-                    rclc_executor_init(&executor, &support.context, 4, &rcl_allocator);
+                    rclc_executor_init(&executor, &support.context, 12, &rcl_allocator);
                     rclc_executor_add_subscription(&executor, &setpoint_sub, &setpoint_msg, &onZitSetpoint, ON_NEW_DATA);
                     rclc_executor_add_subscription(&executor, &arm_sub, &arm_msg, &onArmHeartbeat, ON_NEW_DATA);
                     rclc_executor_add_subscription(&executor, &ins_cmd_sub, &ins_cmd_msg, &onInsCommand, ON_NEW_DATA);
                     rclc_executor_add_subscription(&executor, &pid_sub, &pid_msg, &onZitPid, ON_NEW_DATA);
+                    rclc_executor_add_subscription(&executor, &servo_sub, &servo_msg, &onServoCmd, ON_NEW_DATA);
+                    rclc_executor_add_subscription(&executor, &led_sub, &led_msg, &onLedCmd, ON_NEW_DATA);
                     state = AGENT_CONNECTED;
                 }
             } else vTaskDelay(pdMS_TO_TICKS(100));

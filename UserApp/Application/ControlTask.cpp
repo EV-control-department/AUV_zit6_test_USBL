@@ -12,11 +12,6 @@ void UserApp_ControlTask(void *argument) {
     // 1. 基础内存初始化
     memset(ins_rx_buffer, 0, sizeof(ins_rx_buffer));
     memset(&motor_tx_packet, 0, sizeof(motor_tx_packet));
-    motor_tx_packet.head[0] = 0xFA;
-    motor_tx_packet.head[1] = 0xAF;
-    motor_tx_packet.id = 0x01;
-    motor_tx_packet.tail[0] = 0xFB;
-    motor_tx_packet.tail[1] = 0xBF;
 
     // 2. 驱动初始化
     ins_driver.init();

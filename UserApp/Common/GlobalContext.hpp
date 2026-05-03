@@ -20,7 +20,7 @@ extern I2C_HandleTypeDef hi2c1;
 
 // --- DMA 缓冲区 extern ---
 extern uint8_t ins_rx_buffer[512];
-extern auv::device::MotionController_Driver::Packet motor_tx_packet;
+extern auv::device::MotionController_Driver::ThrustPacket motor_tx_packet;
 
 // --- 全局驱动实例 ---
 namespace auv {

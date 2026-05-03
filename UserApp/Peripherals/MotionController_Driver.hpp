@@ -2,6 +2,8 @@
 #define MOTION_CONTROLLER_DRIVER_HPP
 
 #include "usart.h"
+#include "FreeRTOS.h"
+#include "task.h"
 #include <string.h>
 
 namespace auv {
@@ -120,11 +122,12 @@ private:
     }
 
     void transmitDMA(uint8_t* data, uint16_t size) {
-        // 等待之前的 DMA 发送完成，避免冲突
-        while (huart_->gState != HAL_UART_STATE_READY) {
-            // 在高频任务中，这里理论上不应久等
+        // 使用 FreeRTOS 关键段保护，防止多线程竞争 UART 句柄
+        taskENTER_CRITICAL();
+        if (huart_->gState == HAL_UART_STATE_READY) {
+            HAL_UART_Transmit_DMA(huart_, data, size);
         }
-        HAL_UART_Transmit_DMA(huart_, data, size);
+        taskEXIT_CRITICAL();
     }
 
     UART_HandleTypeDef* huart_;

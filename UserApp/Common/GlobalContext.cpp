@@ -4,7 +4,7 @@
 
 // --- DMA 缓冲区定义 (位于 RAM_D2) ---
 __attribute__((section(".dma_buffer"))) uint8_t ins_rx_buffer[512];
-__attribute__((section(".dma_buffer"))) auv::device::MotionController_Driver::Packet motor_tx_packet;
+__attribute__((section(".dma_buffer"))) auv::device::MotionController_Driver::ThrustPacket motor_tx_packet;
 
 // --- 驱动实例定义 ---
 namespace auv {
