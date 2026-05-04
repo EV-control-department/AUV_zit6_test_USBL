@@ -67,17 +67,22 @@ public:
 
   /**
    * @brief 下发推力指令 (ID: 0x01)
+   * 使用 DMA 发送，不阻塞控制流
    */
   void publishThrust(float fx, float fy, float fz, float fyaw, float fp = 0,
                      float fr = 0) {
+    // 更新推力值（线程安全）
+    taskENTER_CRITICAL();
     thrust_pkt_ptr_->Fx = fx;
     thrust_pkt_ptr_->Fy = fy;
     thrust_pkt_ptr_->Fz = fz;
     thrust_pkt_ptr_->Fyaw = fyaw;
     thrust_pkt_ptr_->Fpitch = fp;
     thrust_pkt_ptr_->Froll = fr;
-    // Angle_servo 也可以在这里设置，但文档建议使用 0x02 独立包
-    transmitDMA((uint8_t *)thrust_pkt_ptr_, sizeof(ThrustPacket));
+    taskEXIT_CRITICAL();
+    
+    // 通过 DMA 发送推力数据包副本
+    sendThrustPacketDMA();
   }
 
   /**
@@ -121,6 +126,20 @@ private:
     pkt->id = id;
     pkt->tail[0] = 0xFB;
     pkt->tail[1] = 0xBF;
+  }
+
+  /**
+   * @brief 创建推力数据包副本并通过 DMA 发送
+   */
+  void sendThrustPacketDMA() {
+    // 创建用于 DMA 发送的本地副本，避免原数据被修改
+    static alignas(32) ThrustPacket dma_pkt;
+    
+    taskENTER_CRITICAL();
+    memcpy(&dma_pkt, thrust_pkt_ptr_, sizeof(ThrustPacket));
+    taskEXIT_CRITICAL();
+    
+    transmitDMA((uint8_t *)&dma_pkt, sizeof(ThrustPacket));
   }
 
   void transmitDMA(uint8_t *data, uint16_t size) {
