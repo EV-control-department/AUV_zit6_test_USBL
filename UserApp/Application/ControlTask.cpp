@@ -60,7 +60,13 @@ auv::NavState ControlTask::updateNavigation() {
     auv::NavState nav = auv::shared::snapshotNavState();
     ins_driver.update(nav);
 
-    nav.z = current_depth_z;
+    // 保护读取全局深度快照，避免 IICTask 并发写导致短时 0 值
+    float depth_snapshot = 0.0f;
+    taskENTER_CRITICAL();
+    depth_snapshot = current_depth_z;
+    taskEXIT_CRITICAL();
+
+    nav.z = depth_snapshot;
 
     taskENTER_CRITICAL();
     shared_nav_state = nav;

@@ -1,23 +1,70 @@
 #include "ChassisManager.hpp"
 #include "main.h"
 #include <algorithm>
+#include "ChassisConfig.hpp"
 
 namespace auv {
 namespace control {
 
 ChassisManager::ChassisManager() {
+  applyConfig(DEFAULT_CHASSIS_CONFIG);
+}
+
+ChassisManager::ChassisManager(const ChassisConfig& cfg) {
+  applyConfig(cfg);
+}
+
+void ChassisManager::applyConfig(const ChassisConfig& cfg) {
+  config_ = cfg;
   for (int i = 0; i < 4; i++) {
-    profiles_[i].setLimits(0.5f, 0.2f);
+    profiles_[i].setLimits(cfg.profile.default_max_v, cfg.profile.default_max_a);
+
     PID_Controller::Config pos_cfg;
-    pos_cfg.kp = 1.0f;
+    pos_cfg.kp = cfg.pos_pid.kp;
+    pos_cfg.ki = cfg.pos_pid.ki;
+    pos_cfg.kd = cfg.pos_pid.kd;
+    pos_cfg.i_limit = cfg.pos_pid.i_limit;
+    pos_cfg.output_limit = cfg.pos_pid.output_limit;
+    pos_cfg.dt = cfg.pos_pid.dt;
     pos_pids_[i].setConfig(pos_cfg);
+
     PID_Controller::Config vel_cfg;
-    vel_cfg.kp = 2.0f;
-    vel_cfg.ki = 0.5f;
-    vel_cfg.kd = 0.1f;
-    vel_cfg.dt = 0.01f;
+    vel_cfg.kp = cfg.vel_pid.kp;
+    vel_cfg.ki = cfg.vel_pid.ki;
+    vel_cfg.kd = cfg.vel_pid.kd;
+    vel_cfg.i_limit = cfg.vel_pid.i_limit;
+    vel_cfg.output_limit = cfg.vel_pid.output_limit;
+    vel_cfg.dt = cfg.vel_pid.dt;
     vel_pids_[i].setConfig(vel_cfg);
   }
+}
+
+ControlLevel ChassisManager::getControlLevel() const {
+  return level_;
+}
+
+PID_Controller::Config ChassisManager::getPIDConfig(int axis, bool is_pos_ring) const {
+  if (axis < 0 || axis >= 4) return {};
+  return is_pos_ring ? pos_pids_[axis].getConfig() : vel_pids_[axis].getConfig();
+}
+
+void ChassisManager::getProfileLimits(int axis, float& max_v, float& max_a) const {
+  if (axis >= 0 && axis < 4) {
+    max_v = profiles_[axis].getMaxV();
+    max_a = profiles_[axis].getMaxA();
+  }
+}
+
+void ChassisManager::configureProfile(int axis, float max_v, float max_a) {
+  if (axis >= 0 && axis < 4) {
+    float v = (max_v >= 0.0f) ? max_v : profiles_[axis].getMaxV();
+    float a = (max_a >= 0.0f) ? max_a : profiles_[axis].getMaxA();
+    profiles_[axis].setLimits(v, a);
+  }
+}
+
+void ChassisManager::setActuatorForces(const float forces[4]) {
+  for (int i = 0; i < 4; i++) target_forces_[i] = forces[i];
 }
 
 void ChassisManager::configurePID(int axis, bool is_pos_ring, float kp,
@@ -103,7 +150,9 @@ std::array<float, 4> ChassisManager::update(const float actual_p[4],
   for (int i = 0; i < 4; i++) {
     ProfileState d = profiles_[i].update(target_p[i], dt);
     if (level_ == ControlLevel::POSITION) {
-      v_target_world[i] = pos_pids_[i].compute(d.p - actual_p[i], dt) + d.v;
+      // 位置环的导数项使用速度误差 (v_ref - v_actual)
+      float pos_derivative = d.v - actual_v[i];
+      v_target_world[i] = pos_pids_[i].compute(d.p - actual_p[i], dt, pos_derivative) + d.v;
     } else {
       v_target_world[i] = d.v;
     }
@@ -120,16 +169,27 @@ std::array<float, 4> ChassisManager::update(const float actual_p[4],
     float f_base = 0.0f;
     if (level_ == ControlLevel::POSITION || level_ == ControlLevel::VELOCITY) {
       // 使用机体系下的目标速度与真实速度进行闭环
-      f_base = vel_pids_[i].compute(v_target_body[i] - actual_v[i], dt);
-      
-      // 前馈处理（加速度前馈暂维持原轴向，实际应考虑旋转，但小型 AUV 简化处理）
-      f_base += 1.0f * profiles_[i].getState().a;
+      // 速度环导数项使用 (a_ref - a_actual)，其中 a_actual 由实际速度差分得到
+      float a_ref = profiles_[i].getState().a;
+      float a_actual = 0.0f;
+      if (last_update_tick_ != 0 && dt > 0.0f) {
+        a_actual = (actual_v[i] - last_actual_v_[i]) / dt;
+      }
+      float vel_derivative = a_ref - a_actual;
+
+      f_base = vel_pids_[i].compute(v_target_body[i] - actual_v[i], dt, vel_derivative);
+
+      // 前馈加速度仍然叠加
+      f_base += 1.0f * a_ref;
     }
     output_forces[i] = f_base + target_forces_[i];
   }
 
   last_z_thrust_ = output_forces[2];
   last_output_forces_ = output_forces; // 更新快照
+
+  // 更新实际速度快照，用于下一周期的加速度估计
+  for (int i = 0; i < 4; i++) last_actual_v_[i] = actual_v[i];
   return output_forces;
 }
 

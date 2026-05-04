@@ -3,6 +3,7 @@
 #include "PID_Controller.hpp"
 #include "KinematicProfile.hpp"
 #include "CoordinateManager.hpp"
+#include "ChassisConfig.hpp"
 #include "CommonConfig.hpp"
 #include <array>
 
@@ -16,11 +17,17 @@ namespace control {
 class ChassisManager {
 public:
     ChassisManager();
+    ChassisManager(const ChassisConfig& cfg);
+
+    /**
+     * @brief 应用外部配置（可用于运行时切换参数）
+     */
+    void applyConfig(const ChassisConfig& cfg);
 
     /**
      * @brief 获取当前控制层级
      */
-    ControlLevel getControlLevel() const { return level_; }
+    ControlLevel getControlLevel() const;
 
     /**
      * @brief 执行 100Hz 级联控制演进 (自动计算 dt)
@@ -42,20 +49,12 @@ public:
     /**
      * @brief 获取指定轴的 PID 配置
      */
-    PID_Controller::Config getPIDConfig(int axis, bool is_pos_ring) const {
-        if (axis < 0 || axis >= 4) return {};
-        return is_pos_ring ? pos_pids_[axis].getConfig() : vel_pids_[axis].getConfig();
-    }
+    PID_Controller::Config getPIDConfig(int axis, bool is_pos_ring) const;
 
     /**
      * @brief 获取指定轴的运动学约束
      */
-    void getProfileLimits(int axis, float& max_v, float& max_a) const {
-        if (axis >= 0 && axis < 4) {
-            max_v = profiles_[axis].getMaxV();
-            max_a = profiles_[axis].getMaxA();
-        }
-    }
+    void getProfileLimits(int axis, float& max_v, float& max_a) const;
 
     /**
      * @brief 配置指定轴的运动学约束
@@ -63,13 +62,7 @@ public:
      * @param max_v 最大速度 (若 < 0 则保留当前值)
      * @param max_a 最大加速度 (若 < 0 则保留当前值)
      */
-    void configureProfile(int axis, float max_v, float max_a) {
-        if (axis >= 0 && axis < 4) {
-            float v = (max_v >= 0.0f) ? max_v : profiles_[axis].getMaxV();
-            float a = (max_a >= 0.0f) ? max_a : profiles_[axis].getMaxA();
-            profiles_[axis].setLimits(v, a);
-        }
-    }
+    void configureProfile(int axis, float max_v, float max_a);
 
     /**
      * @brief 切换控制层级 (Bumpless Transfer)
@@ -83,9 +76,7 @@ public:
      * @brief 直接设置执行器输出力 (作为 ACTUATOR 输出或闭环 Bias)
      * @param forces 归一化力矢量 [Fx, Fy, Fz, Mz]
      */
-    void setActuatorForces(const float forces[4]) {
-        for (int i = 0; i < 4; i++) target_forces_[i] = forces[i];
-    }
+    void setActuatorForces(const float forces[4]);
 
 private:
     ControlLevel level_ = ControlLevel::NONE;
@@ -97,7 +88,9 @@ private:
     std::array<float, 4> target_forces_  = {0}; ///< 压入推力环的直接力/偏置
     std::array<float, 4> last_output_forces_ = {0}; ///< 记录上周期的最终输出，用于无扰切换
     float last_z_thrust_ = 0.0f;               ///< 记录上周期的 Z 轴推力，用于 Trim Pre-loading
+    std::array<float, 4> last_actual_v_ = {0}; ///< 上周期实际速度，用于计算加速度（用于 D 项）
     uint32_t last_update_tick_ = 0;            ///< 用于自动计算 dt
+    ChassisConfig config_ = DEFAULT_CHASSIS_CONFIG; ///< 当前应用的底盘参数
 };
 
 } // namespace control

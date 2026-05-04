@@ -52,7 +52,6 @@ inline int8_t MS5837::read8(uint8_t addr)
 {
     uint8_t data = 0;
     transmitByte(&addr);
-    osDelay(20);
     receiveByte(&data);
     return data;
 }
@@ -61,7 +60,6 @@ inline bool MS5837::read16(uint8_t addr, uint16_t &out_data)
 {
     uint8_t dataArr[2] = {0, 0};
     if (!transmitByte(&addr)) return false;
-    osDelay(20);
     if (!receive(dataArr, 2)) return false;
     out_data = (dataArr[0] << 8) | dataArr[1];
     return true;
@@ -71,7 +69,6 @@ inline bool MS5837::read32(uint8_t addr, uint32_t &out_data)
 {
     uint8_t dataArr[4] = {0, 0, 0, 0};
     if (!transmitByte(&addr)) return false;
-    osDelay(20);
     if (!receive(dataArr, 4)) return false;
     out_data = (dataArr[0] << 24) | (dataArr[1] << 16) | (dataArr[2] << 8) | dataArr[3];
     return true;
@@ -170,34 +167,89 @@ void MS5837::calculate()
 #ifdef bar
     pressure = m_MS5837_values.P * 0.001f;
 #endif
+    // Update last valid depth only when reading is reasonable to avoid transient zeros
+    {
+        float computed_depth = (pressure * 100.0f - 101300.0f) / (fluidDensity * 9.80665f);
+        bool valid = true;
+        if (!(pressure > 0.0f)) valid = false;
+        if (!(computed_depth > -5.0f && computed_depth < 50.0f)) valid = false;
+        if (valid) {
+            taskENTER_CRITICAL();
+            last_valid_pressure = pressure;
+            last_valid_depth = computed_depth;
+            has_valid_depth = true;
+            taskEXIT_CRITICAL();
+        }
+    }
 }
 
-bool MS5837::Read()
+int MS5837::Read()
 {
-    uint8_t reset_cmd = MS5837_CONVERT_D1_8192;
-    if (!transmitByte(&reset_cmd)) return false;
-    osDelay(20);
+    // Non-blocking state machine: call frequently (e.g., 60Hz) until it returns 1 (new sample)
+    uint32_t now = HAL_GetTick();
+    switch (conv_state) {
+        case CS_IDLE: {
+            uint8_t cmd = MS5837_CONVERT_D1_8192;
+            if (!transmitByte(&cmd)) {
+                return -1; // I2C transmit error
+            }
+            conv_start_ms = now;
+            conv_state = CS_WAIT_D1;
+            return 0; // conversion started
+        }
+        case CS_WAIT_D1: {
+            if ((uint32_t)(now - conv_start_ms) < conv_delay_ms) return 0;
+            uint32_t d1_raw = 0;
+            if (!read32(MS5837_ADC_READ, d1_raw)) {
+                conv_state = CS_IDLE;
+                return -1;
+            }
+            m_MS5837_values.D1 = d1_raw >> 8;
 
-    uint32_t d1_raw = 0;
-    if (!read32(MS5837_ADC_READ, d1_raw)) return false;
-    m_MS5837_values.D1 = d1_raw >> 8;
-    
-    osDelay(20);
-    reset_cmd = MS5837_CONVERT_D2_8192;
-    if (!transmitByte(&reset_cmd)) return false;
-    osDelay(20);
+            uint8_t cmd = MS5837_CONVERT_D2_8192;
+            if (!transmitByte(&cmd)) {
+                conv_state = CS_IDLE;
+                return -1;
+            }
+            conv_start_ms = now;
+            conv_state = CS_WAIT_D2;
+            return 0;
+        }
+        case CS_WAIT_D2: {
+            if ((uint32_t)(now - conv_start_ms) < conv_delay_ms) return 0;
+            uint32_t d2_raw = 0;
+            if (!read32(MS5837_ADC_READ, d2_raw)) {
+                conv_state = CS_IDLE;
+                return -1;
+            }
+            m_MS5837_values.D2 = d2_raw >> 8;
 
-    uint32_t d2_raw = 0;
-    if (!read32(MS5837_ADC_READ, d2_raw)) return false;
-    m_MS5837_values.D2 = d2_raw >> 8;
+            // We have both D1 and D2 -> compute
+            calculate();
 
-    calculate();
-    return true;
+            // Start next D1 conversion to pipeline continuous sampling
+            uint8_t cmd = MS5837_CONVERT_D1_8192;
+            if (!transmitByte(&cmd)) {
+                conv_state = CS_IDLE;
+                return 1; // sample available but couldn't start next, still report success
+            }
+            conv_start_ms = now;
+            conv_state = CS_WAIT_D1;
+            return 1; // new sample ready
+        }
+    }
+    return 0;
 }
 
 void MS5837::Depth(float *p)
 {
-    *p = (pressure * 100.0f - 101300) / (fluidDensity * 9.80665);
+    if (has_valid_depth) {
+        taskENTER_CRITICAL();
+        *p = last_valid_depth;
+        taskEXIT_CRITICAL();
+    } else {
+        *p = (pressure * 100.0f - 101300.0f) / (fluidDensity * 9.80665f);
+    }
 }
 
 inline void MS5837::altitude(float *p)
@@ -208,6 +260,9 @@ inline void MS5837::altitude(float *p)
 MS5837::MS5837(I2C_HandleTypeDef *hi2c, uint8_t SLAVE_ADDRESS, uint16_t MemAddSize) 
                 : hi2c(hi2c), slave_address(SLAVE_ADDRESS), model(MS5837_30BA), fluidDensity(1029)
 {
+    last_valid_pressure = 0.0f;
+    last_valid_depth = 0.0f;
+    has_valid_depth = false;
 }
 
 MS5837::~MS5837()

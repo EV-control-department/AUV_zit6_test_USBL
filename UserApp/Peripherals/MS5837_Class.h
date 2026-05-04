@@ -43,6 +43,10 @@ private:
     float temperture;
     float pressure;
     MS5837_values m_MS5837_values;
+    // Last validated values (to avoid transient invalid reads like zeros)
+    float last_valid_pressure;
+    float last_valid_depth;
+    bool  has_valid_depth;
 private:
     bool transmitByte(uint8_t *pData);
     bool receiveByte(uint8_t *pData);
@@ -57,11 +61,22 @@ public:
     bool is_connected;
 public:
     void Init(void);
-
-    bool Read();
+        // Read operates as a non-blocking state machine:
+        //  return 1 : a new sample (D1+D2) was completed and processed
+        //  return 0 : conversion in progress (no new sample yet)
+        //  return -1: error (I2C failure)
+        int Read();
+        // Set conversion waiting time (ms) used between convert command and ADC read.
+        // Lower value -> higher sample rate but may risk conversion not finished.
+        void setConversionDelay(uint16_t ms) { conv_delay_ms = ms; }
     void Depth(float *p);
     
     inline void altitude(float *p);
+    // Internal non-blocking conversion state
+    enum ConvState : uint8_t { CS_IDLE = 0, CS_WAIT_D1 = 1, CS_WAIT_D2 = 2 };
+    ConvState conv_state = CS_IDLE;
+    uint32_t conv_start_ms = 0;
+    uint16_t conv_delay_ms = 10; // default 10ms -> target ~60Hz when interleaving
 
     MS5837(I2C_HandleTypeDef* hi2c, uint8_t SLAVE_ADDRESS = MS5837_ADDR, uint16_t MemAddSize = 0);
     ~MS5837();
