@@ -115,6 +115,7 @@ void onArmHeartbeat(const void *msgin) {
     taskENTER_CRITICAL();
     last_arm_heartbeat_ms = HAL_GetTick();
     last_arm_heartbeat_data = msg->data;
+    // 未解锁时，无条件累积心跳计数；解锁判断(data值)由 ControlTask 负责
     if (!is_system_armed) {
         if (arm_heartbeat_count == 0) arm_start_ms = last_arm_heartbeat_ms;
         arm_heartbeat_count++;

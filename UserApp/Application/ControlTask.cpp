@@ -70,16 +70,19 @@ void UserApp_ControlTask(void *argument) {
                 uint32_t hbt_data = last_arm_heartbeat_data;
                 taskEXIT_CRITICAL();
 
+                // hbt_data == 3 为遥控模式，不需要导航就绪；其他值需要导航就绪
                 if (hbt_data == 3 || shared::isNavigationValid(nav)) {
                     taskENTER_CRITICAL();
                     is_system_armed = true;
                     taskEXIT_CRITICAL();
                 } else {
+                    // 导航未就绪，重置计数，等待下一轮积累
                     taskENTER_CRITICAL();
                     arm_heartbeat_count = 0;
                     taskEXIT_CRITICAL();
                 }
             }
+            // 心跳超时：若最后一次心跳超过 1000ms，则重置计数
             if (now - heartbeat_snapshot > 1000) {
                 taskENTER_CRITICAL();
                 arm_heartbeat_count = 0;
