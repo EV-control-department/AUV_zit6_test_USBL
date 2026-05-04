@@ -41,7 +41,20 @@ void ControlTask::run() {
 
 void ControlTask::init() {
     memset(ins_rx_buffer, 0, sizeof(ins_rx_buffer));
-    memset(&motor_tx_packet, 0, sizeof(motor_tx_packet));
+    // 初始化 motor_tx_packet：保留/设置帧头帧尾和 id，清零有效载荷字段
+    taskENTER_CRITICAL();
+    motor_tx_packet.head[0] = 0xFA;
+    motor_tx_packet.head[1] = 0xAF;
+    motor_tx_packet.id = 0x01;
+    motor_tx_packet.Fx = 0.0f;
+    motor_tx_packet.Fy = 0.0f;
+    motor_tx_packet.Fz = 0.0f;
+    motor_tx_packet.Fyaw = 0.0f;
+    motor_tx_packet.Fpitch = 0.0f;
+    motor_tx_packet.Froll = 0.0f;
+    motor_tx_packet.tail[0] = 0xFB;
+    motor_tx_packet.tail[1] = 0xBF;
+    taskEXIT_CRITICAL();
 
     ins_driver.init();
     SoftWatchdog::getInstance().init();
