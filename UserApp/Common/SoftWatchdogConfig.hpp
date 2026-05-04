@@ -18,7 +18,7 @@ static const SoftWatchdogConfig DEFAULT_WATCHDOG_CONFIG = {
     .timeout_ms = 3000,
     .check_microros = true,
     .check_ins = false,
-    .check_depth = true
+    .check_depth = false
 };
 
 #endif

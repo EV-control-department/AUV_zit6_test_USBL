@@ -14,7 +14,7 @@ private:
 	static void fillActualState(const auv::NavState &nav, float (&actual_p)[4], float (&actual_v)[4]);
 
 	static constexpr uint32_t kLoopPeriodMs = 10;
-	static constexpr uint32_t kArmedHeartbeatTimeoutMs = 8000; // 放宽：避免短时网络/transport 停顿导致误 disarm
+	static constexpr uint32_t kArmedHeartbeatTimeoutMs = 500; // 恢复：短阈值，快速 disarm
 	static constexpr uint32_t kDisarmedHeartbeatTimeoutMs = 1000;
 	static constexpr uint32_t kArmMinDurationMs = 1000;
 	static constexpr uint32_t kArmMinHeartbeatCount = 10;
