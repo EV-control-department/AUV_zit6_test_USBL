@@ -68,14 +68,14 @@ const osThreadAttr_t micro_ros_task_attributes = {
 osThreadId_t hardware_bridgeHandle;
 const osThreadAttr_t hardware_bridge_attributes = {
   .name = "hardware_bridge",
-  .stack_size = 1024 * 4,
+  .stack_size = 2048 * 4,
   .priority = (osPriority_t) osPriorityHigh,
 };
 /* Definitions for iic_task */
 osThreadId_t iic_taskHandle;
 const osThreadAttr_t iic_task_attributes = {
   .name = "iic_task",
-  .stack_size = 512 * 4,
+  .stack_size = 1024 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for imu_queue */

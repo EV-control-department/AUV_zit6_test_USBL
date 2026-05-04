@@ -88,10 +88,10 @@ size_t cubemx_transport_write(struct uxrCustomTransport* transport, uint8_t * bu
     
     uint32_t primask = __get_PRIMASK();
     __disable_irq();
-    
+
     size_t current_head = tx_head;
     size_t current_tail = tx_tail;
-    
+
     if (current_head >= current_tail) {
         free_space = UART_DMA_BUFFER_SIZE - (current_head - current_tail) - 1;
     } else {
@@ -104,14 +104,20 @@ size_t cubemx_transport_write(struct uxrCustomTransport* transport, uint8_t * bu
         tx_ring_buffer[tx_head] = buf[i];
         tx_head = (tx_head + 1) % UART_DMA_BUFFER_SIZE;
     }
-    
+
     total_written = to_write;
 
-    if (!tx_busy) {
-        start_next_tx(uart);
+    /* Defer starting the HAL DMA until after interrupts are restored. */
+    bool need_start = false;
+    if (!tx_busy && (tx_head != tx_tail)) {
+        need_start = true;
     }
 
     if (primask == 0) __enable_irq();
+
+    if (need_start) {
+        start_next_tx(uart);
+    }
 
     return total_written;
 }

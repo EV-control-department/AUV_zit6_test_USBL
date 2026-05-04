@@ -1209,12 +1209,39 @@ void HAL_DMA_IRQHandler(DMA_HandleTypeDef *hdma)
   __IO uint32_t count = 0U;
   uint32_t timeout = SystemCoreClock / 9600U;
 
+  /* Protective checks: validate handle and instance to avoid dereferencing
+     invalid pointers in IRQ context. If checks fail, exit quickly. */
+  if (hdma == NULL)
+  {
+    return;
+  }
+
+  /* Verify the Instance refers to a known DMA/BDMA peripheral */
+  if((IS_DMA_ALL_INSTANCE(hdma->Instance) == 0U) && (IS_BDMA_CHANNEL_INSTANCE(hdma->Instance) == 0U))
+  {
+    hdma->ErrorCode = HAL_DMA_ERROR_PARAM;
+    return;
+  }
+
+  /* Basic sanity checks for stream base/index previously computed in Init */
+  if((hdma->StreamBaseAddress == 0U) || ((hdma->StreamIndex & ~0x1FU) != 0U))
+  {
+    hdma->ErrorCode = HAL_DMA_ERROR_PARAM;
+    return;
+  }
+
   /* calculate DMA base and stream number */
   DMA_Base_Registers  *regs_dma  = (DMA_Base_Registers *)hdma->StreamBaseAddress;
   BDMA_Base_Registers *regs_bdma = (BDMA_Base_Registers *)hdma->StreamBaseAddress;
 
+  /* Read ISR registers once. If both are zero, there is nothing to handle. */
   tmpisr_dma  = regs_dma->ISR;
   tmpisr_bdma = regs_bdma->ISR;
+
+  if((tmpisr_dma == 0U) && (tmpisr_bdma == 0U))
+  {
+    return;
+  }
 
   if(IS_DMA_STREAM_INSTANCE(hdma->Instance) != 0U)  /* DMA1 or DMA2 instance */
   {

@@ -5,6 +5,9 @@
 #include "task.h"
 #include "usart.h"
 #include <string.h>
+#include <stdint.h>
+
+// SCB cache maintenance is provided by CMSIS headers (core_cm7)
 
 namespace auv {
 namespace device {
@@ -132,23 +135,51 @@ private:
    * @brief 创建推力数据包副本并通过 DMA 发送
    */
   void sendThrustPacketDMA() {
-    // 创建用于 DMA 发送的本地副本，避免原数据被修改
-    static ThrustPacket dma_pkt __attribute__((aligned(32)));
-    
+    // 创建用于 DMA 发送的本地副本（放在非缓存 RAM_D2 段）
+    static ThrustPacket dma_pkt __attribute__((section(".dma_buffer"), aligned(32)));
+
     taskENTER_CRITICAL();
     memcpy(&dma_pkt, thrust_pkt_ptr_, sizeof(ThrustPacket));
     taskEXIT_CRITICAL();
-    
+
     transmitDMA((uint8_t *)&dma_pkt, sizeof(ThrustPacket));
   }
 
   void transmitDMA(uint8_t *data, uint16_t size) {
-    // 使用 FreeRTOS 关键段保护，防止多线程竞争 UART 句柄
+    // 只在短临界区内检查 UART 状态，实际启动 DMA 要在临界区外完成
+    bool can_start = false;
     taskENTER_CRITICAL();
     if (huart_->gState == HAL_UART_STATE_READY) {
-      HAL_UART_Transmit_DMA(huart_, data, size);
+      can_start = true;
     }
     taskEXIT_CRITICAL();
+
+    if (!can_start) {
+      return;
+    }
+    // 如果 DMA Stream 仍然被使能（可能上一次传输尚未完成），短重试后放弃启动，避免在 HAL IRQ 中卡死
+    if (huart_->hdmatx != NULL) {
+      DMA_Stream_TypeDef *dma_stream = (DMA_Stream_TypeDef *)huart_->hdmatx->Instance;
+      int retries = 3;
+      while (retries-- > 0) {
+        if ((dma_stream->CR & DMA_SxCR_EN) == 0U) break;
+        for (volatile int i = 0; i < 100; ++i) __asm__ volatile ("nop");
+      }
+      if ((dma_stream->CR & DMA_SxCR_EN) != 0U) {
+        return;
+      }
+    }
+
+    // 清理 D-Cache：按 32 字节行对齐地址与长度
+    const uintptr_t dcache_line = 32u;
+    uintptr_t addr = (uintptr_t)data;
+    uintptr_t aligned_addr = addr & ~(dcache_line - 1);
+    uintptr_t end = (addr + size + dcache_line - 1) & ~(dcache_line - 1);
+    int32_t clean_size = (int32_t)(end - aligned_addr);
+    SCB_CleanDCache_by_Addr((uint32_t *)aligned_addr, clean_size);
+
+    HAL_StatusTypeDef res = HAL_UART_Transmit_DMA(huart_, data, size);
+    (void)res;
   }
 
   UART_HandleTypeDef *huart_;

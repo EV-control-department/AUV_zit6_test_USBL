@@ -38,6 +38,13 @@ public:
      * @brief 发送数据 (DMA 方式)
      */
     bool transmit(const uint8_t* data, uint16_t len) {
+        // Avoid starting a new DMA if the stream still enabled (race with previous transfer)
+        if (huart_->hdmatx != NULL) {
+            DMA_Stream_TypeDef *dma_stream = (DMA_Stream_TypeDef *)huart_->hdmatx->Instance;
+            if ((dma_stream->CR & DMA_SxCR_EN) != 0U) {
+                return false;
+            }
+        }
         return HAL_UART_Transmit_DMA(huart_, const_cast<uint8_t*>(data), len) == HAL_OK;
     }
 
