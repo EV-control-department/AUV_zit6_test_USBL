@@ -133,7 +133,7 @@ private:
    */
   void sendThrustPacketDMA() {
     // 创建用于 DMA 发送的本地副本，避免原数据被修改
-    static alignas(32) ThrustPacket dma_pkt;
+    static ThrustPacket dma_pkt __attribute__((aligned(32)));
     
     taskENTER_CRITICAL();
     memcpy(&dma_pkt, thrust_pkt_ptr_, sizeof(ThrustPacket));
@@ -153,7 +153,7 @@ private:
 
   UART_HandleTypeDef *huart_;
   ThrustPacket *thrust_pkt_ptr_;
-  alignas(32) ThrustPacket thrust_pkt_internal_;
+  ThrustPacket thrust_pkt_internal_ __attribute__((aligned(32)));
 };
 
 } // namespace device

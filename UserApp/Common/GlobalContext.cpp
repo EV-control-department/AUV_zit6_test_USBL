@@ -33,6 +33,7 @@ uint32_t last_arm_heartbeat_data = 0;
 uint32_t arm_start_ms = 0;
 auv::NavState shared_nav_state{};
 
+namespace auv {
 namespace shared {
 
 bool isNavigationValid(const auv::NavState &nav) {
@@ -49,3 +50,4 @@ auv::NavState snapshotNavState() {
 }
 
 } // namespace shared
+} // namespace auv

@@ -51,9 +51,11 @@ extern uint32_t arm_start_ms;
 extern auv::NavState shared_nav_state;
 
 // --- 公共辅助函数 ---
+namespace auv {
 namespace shared {
-    bool isNavigationValid(const auv::NavState &nav);
-    auv::NavState snapshotNavState();
+    bool isNavigationValid(const NavState &nav);
+    NavState snapshotNavState();
+}
 }
 
 #endif

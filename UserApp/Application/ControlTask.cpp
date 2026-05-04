@@ -1,5 +1,5 @@
+#include "AppMain.hpp"
 #include "ControlTask.hpp"
-#include "GlobalContext.hpp"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "SoftWatchdog.hpp"
@@ -8,107 +8,155 @@
 using namespace auv::device;
 using namespace auv::control;
 
-void UserApp_ControlTask(void *argument) {
-    // 1. 基础内存初始化
+
+void ControlTask::fillActualState(const auv::NavState &nav, float (&actual_p)[4], float (&actual_v)[4]) {
+    actual_p[0] = nav.x;
+    actual_p[1] = nav.y;
+    actual_p[2] = nav.z;
+    actual_p[3] = nav.yaw;
+
+    actual_v[0] = nav.vx;
+    actual_v[1] = nav.vy;
+    actual_v[2] = nav.vz;
+    actual_v[3] = nav.vyaw;
+}
+
+void ControlTask::run() {
+    init();
+
+    for (;;) {
+        refreshHardwareWatchdogIfNeeded();
+
+        const uint32_t now = HAL_GetTick();
+        last_dt_ms = static_cast<float>(now - last_tick_);
+        last_tick_ = now;
+
+        auv::NavState nav = updateNavigation();
+        handleArmState(nav, now);
+        computeAndPublish(nav);
+
+        vTaskDelayUntil(&last_wake_time_, pdMS_TO_TICKS(kLoopPeriodMs));
+    }
+}
+
+void ControlTask::init() {
     memset(ins_rx_buffer, 0, sizeof(ins_rx_buffer));
     memset(&motor_tx_packet, 0, sizeof(motor_tx_packet));
 
-    // 2. 驱动初始化
     ins_driver.init();
     SoftWatchdog::getInstance().init();
-    
-    TickType_t xLastWakeTime = xTaskGetTickCount();
-    uint32_t last_tick = HAL_GetTick();
-    
-    for (;;) {
-        // --- 硬件喂狗 (受软件看门狗保护) ---
-        if (SoftWatchdog::getInstance().check()) {
-            HAL_IWDG_Refresh(&hiwdg1);
-        }
 
-        uint32_t now = HAL_GetTick();
-        last_dt_ms = (float)(now - last_tick);
-        last_tick = now;
-        
-        auv::NavState nav = shared::snapshotNavState();
-        ins_driver.update(nav);
-        
-        // Inject MS5837 depth data as the Z-axis position
-        nav.z = current_depth_z;
+    last_wake_time_ = xTaskGetTickCount();
+    last_tick_ = HAL_GetTick();
+}
 
-        taskENTER_CRITICAL();
-        shared_nav_state = nav;
-        taskEXIT_CRITICAL();
-
-        // --- ARM 状态机逻辑 ---
-        taskENTER_CRITICAL();
-        bool armed_snapshot = is_system_armed;
-        uint32_t heartbeat_snapshot = last_arm_heartbeat_ms;
-        uint32_t heartbeat_count_snapshot = arm_heartbeat_count;
-        uint32_t arm_start_snapshot = arm_start_ms;
-        taskEXIT_CRITICAL();
-
-        if (armed_snapshot) {
-            if (now - heartbeat_snapshot > 500) {
-                taskENTER_CRITICAL();
-                is_system_armed = false;
-                arm_heartbeat_count = 0;
-                taskEXIT_CRITICAL();
-                float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw},
-                      actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
-                chassis.setControlLevel(auv::ControlLevel::NONE, actual_p, actual_v);
-            }
-        } else {
-            if (chassis.getControlLevel() != auv::ControlLevel::NONE) {
-                float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw},
-                      actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
-                chassis.setControlLevel(auv::ControlLevel::NONE, actual_p, actual_v);
-            }
-
-            if (heartbeat_count_snapshot >= 10 && (now - arm_start_snapshot >= 1000)) {
-                taskENTER_CRITICAL();
-                uint32_t hbt_data = last_arm_heartbeat_data;
-                taskEXIT_CRITICAL();
-
-                // hbt_data == 3 为遥控模式，不需要导航就绪；其他值需要导航就绪
-                if (hbt_data == 3 || shared::isNavigationValid(nav)) {
-                    taskENTER_CRITICAL();
-                    is_system_armed = true;
-                    taskEXIT_CRITICAL();
-                } else {
-                    // 导航未就绪，重置计数，等待下一轮积累
-                    taskENTER_CRITICAL();
-                    arm_heartbeat_count = 0;
-                    taskEXIT_CRITICAL();
-                }
-            }
-            // 心跳超时：若最后一次心跳超过 1000ms，则重置计数
-            if (now - heartbeat_snapshot > 1000) {
-                taskENTER_CRITICAL();
-                arm_heartbeat_count = 0;
-                taskEXIT_CRITICAL();
-            }
-        }
-
-        float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw},
-              actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
-        float target_snapshot[4];
-        taskENTER_CRITICAL();
-        for (int i = 0; i < 4; i++) target_snapshot[i] = target_p[i];
-        taskEXIT_CRITICAL();
-
-        auto forces = chassis.update(actual_p, actual_v, target_snapshot);
-        taskENTER_CRITICAL();
-        for (int i = 0; i < 4; i++) last_output_forces[i] = forces[i];
-        bool armed = is_system_armed;
-        taskEXIT_CRITICAL();
-
-        if (armed) {
-            motor_driver.publishThrust(forces[0], forces[1], forces[2], forces[3]);
-        } else {
-            motor_driver.publishThrust(0, 0, 0, 0);
-        }
-
-        vTaskDelayUntil(&xLastWakeTime, pdMS_TO_TICKS(10));
+void ControlTask::refreshHardwareWatchdogIfNeeded() {
+    if (SoftWatchdog::getInstance().check()) {
+        HAL_IWDG_Refresh(&hiwdg1);
     }
+}
+
+auv::NavState ControlTask::updateNavigation() {
+    auv::NavState nav = auv::shared::snapshotNavState();
+    ins_driver.update(nav);
+
+    nav.z = current_depth_z;
+
+    taskENTER_CRITICAL();
+    shared_nav_state = nav;
+    taskEXIT_CRITICAL();
+
+    return nav;
+}
+
+void ControlTask::setControlLevelNone(const auv::NavState &nav) {
+    float actual_p[4];
+    float actual_v[4];
+    fillActualState(nav, actual_p, actual_v);
+    chassis.setControlLevel(auv::ControlLevel::NONE, actual_p, actual_v);
+}
+
+void ControlTask::forceDisarmWithNeutralLevel(const auv::NavState &nav) {
+    taskENTER_CRITICAL();
+    is_system_armed = false;
+    arm_heartbeat_count = 0;
+    taskEXIT_CRITICAL();
+    setControlLevelNone(nav);
+}
+
+void ControlTask::handleArmState(const auv::NavState &nav, uint32_t now) {
+    taskENTER_CRITICAL();
+    const bool armed_snapshot = is_system_armed;
+    const uint32_t heartbeat_snapshot = last_arm_heartbeat_ms;
+    const uint32_t heartbeat_count_snapshot = arm_heartbeat_count;
+    const uint32_t arm_start_snapshot = arm_start_ms;
+    taskEXIT_CRITICAL();
+
+    if (armed_snapshot) {
+        if (now - heartbeat_snapshot > kArmedHeartbeatTimeoutMs) {
+            forceDisarmWithNeutralLevel(nav);
+        }
+        return;
+    }
+
+    if (chassis.getControlLevel() != auv::ControlLevel::NONE) {
+        setControlLevelNone(nav);
+    }
+
+    if (heartbeat_count_snapshot >= kArmMinHeartbeatCount &&
+        (now - arm_start_snapshot >= kArmMinDurationMs)) {
+        taskENTER_CRITICAL();
+        const uint32_t hbt_data = last_arm_heartbeat_data;
+        taskEXIT_CRITICAL();
+
+        if (hbt_data == kRemoteModeHeartbeatData || auv::shared::isNavigationValid(nav)) {
+            taskENTER_CRITICAL();
+            is_system_armed = true;
+            taskEXIT_CRITICAL();
+        } else {
+            taskENTER_CRITICAL();
+            arm_heartbeat_count = 0;
+            taskEXIT_CRITICAL();
+        }
+    }
+
+    if (now - heartbeat_snapshot > kDisarmedHeartbeatTimeoutMs) {
+        taskENTER_CRITICAL();
+        arm_heartbeat_count = 0;
+        taskEXIT_CRITICAL();
+    }
+}
+
+void ControlTask::computeAndPublish(const auv::NavState &nav) {
+    float actual_p[4];
+    float actual_v[4];
+    fillActualState(nav, actual_p, actual_v);
+
+    float target_snapshot[4];
+    taskENTER_CRITICAL();
+    for (int i = 0; i < 4; ++i) {
+        target_snapshot[i] = target_p[i];
+    }
+    taskEXIT_CRITICAL();
+
+    auto forces = chassis.update(actual_p, actual_v, target_snapshot);
+
+    taskENTER_CRITICAL();
+    for (int i = 0; i < 4; ++i) {
+        last_output_forces[i] = forces[i];
+    }
+    const bool armed = is_system_armed;
+    taskEXIT_CRITICAL();
+
+    if (armed) {
+        motor_driver.publishThrust(forces[0], forces[1], forces[2], forces[3]);
+    } else {
+        motor_driver.publishThrust(0, 0, 0, 0);
+    }
+}
+
+void UserApp_ControlTask(void *argument) {
+    (void)argument;
+    ControlTask runner;
+    runner.run();
 }
