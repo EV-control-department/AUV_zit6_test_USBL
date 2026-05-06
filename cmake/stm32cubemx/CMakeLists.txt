@@ -6,7 +6,6 @@ set(MX_Defines_Syms
 	USE_PWR_LDO_SUPPLY 
 	USE_HAL_DRIVER 
 	STM32H743xx
-	DATA_IN_D2_SRAM
     $<$<CONFIG:Debug>:DEBUG>
 )
 
