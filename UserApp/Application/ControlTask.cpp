@@ -5,6 +5,7 @@
 #include "SoftWatchdog.hpp"
 #include "SensorsConfig.hpp"
 #include <string.h>
+#include "SerialPort.hpp"
 
 using namespace auv::device;
 using namespace auv::control;
@@ -59,6 +60,10 @@ void ControlTask::init() {
 
     ins_driver.init();
     SoftWatchdog::getInstance().init();
+
+    // 简单测试：非阻塞地通过 UART5 发送一条调试信息（忙时丢弃）
+    const char test_msg[] = "DEBUG: UART5 OK\r\n";
+    auv::porting::SerialPort::transmitDebug(reinterpret_cast<const uint8_t*>(test_msg), sizeof(test_msg) - 1);
 
     last_wake_time_ = xTaskGetTickCount();
     last_tick_ = HAL_GetTick();
