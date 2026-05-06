@@ -6,6 +6,7 @@
 #include "SensorsConfig.hpp"
 #include <string.h>
 #include "SerialPort.hpp"
+#include <cstdio>
 
 using namespace auv::device;
 using namespace auv::control;
@@ -36,6 +37,18 @@ void ControlTask::run() {
         auv::common::NavState nav = updateNavigation();
         handleArmState(nav, now);
         computeAndPublish(nav);
+
+        // 周期性调试信息（非阻塞，通过 UART5 DMA，忙时丢弃）
+        static uint32_t last_log_ms = 0;
+        if (now - last_log_ms >= 1000) {
+            last_log_ms = now;
+            char dbgbuf[128];
+            int n = std::snprintf(dbgbuf, sizeof(dbgbuf), "DBG t=%lu dt=%.1f z=%.2f armed=%d\r\n",
+                                  (unsigned long)now, last_dt_ms, nav.z, is_system_armed ? 1 : 0);
+            if (n > 0) {
+                auv::porting::SerialPort::transmitDebug(reinterpret_cast<const uint8_t*>(dbgbuf), (uint16_t)(n > (int)sizeof(dbgbuf) ? (int)sizeof(dbgbuf) : n));
+            }
+        }
 
         vTaskDelayUntil(&last_wake_time_, pdMS_TO_TICKS(kLoopPeriodMs));
     }

@@ -10,7 +10,7 @@
 
 // --- 硬件句柄 extern ---
 extern "C" {
-extern UART_HandleTypeDef huart7;
+extern UART_HandleTypeDef huart5;
 extern UART_HandleTypeDef huart3;
 extern UART_HandleTypeDef huart2;
 extern UART_HandleTypeDef huart6;

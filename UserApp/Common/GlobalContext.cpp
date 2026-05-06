@@ -9,7 +9,7 @@ __attribute__((section(".dma_buffer"))) auv::device::MotionController_Driver::Th
 // --- 驱动实例定义 ---
 namespace auv {
 namespace device {
-    INS_Driver ins_driver(&huart7, &huart7, ins_rx_buffer, 512);
+    INS_Driver ins_driver(&huart5, &huart5, ins_rx_buffer, 512);
     MotionController_Driver motor_driver(&huart6, &motor_tx_packet);
     MS5837 depth_sensor(&hi2c1);
 }
