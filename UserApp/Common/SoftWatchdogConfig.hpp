@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+namespace auv {
+namespace config {
+
 /**
  * @struct SoftWatchdogConfig
  * @brief 软件看门狗配置结构体 (Auto-generated from config.json)
@@ -20,5 +23,8 @@ static const SoftWatchdogConfig DEFAULT_WATCHDOG_CONFIG = {
     .check_ins = false,
     .check_depth = false
 };
+
+} // namespace config
+} // namespace auv
 
 #endif

@@ -32,8 +32,8 @@ public:
         : rx_port_(rx_uart, 512), tx_uart_(tx_uart) {}
 
     void init();
-    bool update(NavState& state);
-    NavState getNavState() const { return state_; }
+    bool update(auv::common::NavState& state);
+    auv::common::NavState getNavState() const { return state_; }
 
     /**
      * @brief 检查惯导数据是否新鲜 (200ms 内有更新)
@@ -75,7 +75,7 @@ public:
     void setInitialPosition(double lat, double lon);
 
 private:
-    SerialPort rx_port_;          ///< 串口接收驱动
+    porting::SerialPort rx_port_;          ///< 串口接收驱动
     UART_HandleTypeDef* tx_uart_; ///< 指令发送串口句柄
     uint32_t rx_total_bytes_ = 0; ///< 累计接收字节数（调试统计）
     uint32_t last_update_ms_ = 0; ///< 上次收到有效包的时间
@@ -85,15 +85,15 @@ private:
     uint8_t packet_buf_[kMaxFrameSize] = {0};      ///< 帧解析临时缓冲区
     uint16_t frame_len_ = 0;                       ///< 当前解析长度
 
-    NavState state_{}; ///< 缓存的最新有效位姿状态
-    NavState prev_state_{}; ///< 上一帧状态，用于速度差分估计
+    auv::common::NavState state_{}; ///< 缓存的最新有效位姿状态
+    auv::common::NavState prev_state_{}; ///< 上一帧状态，用于速度差分估计
     bool has_prev_state_ = false;
 
     // 内部私有方法
     uint8_t checkData(const uint8_t* data, uint8_t size);
     bool parseByte(uint8_t b);
     bool validateFrame();
-    void decodePacket(NavState& state);
+    void decodePacket(auv::common::NavState& state);
 };
 
 } // namespace device

@@ -66,14 +66,14 @@ void MicroRosTask::onZitSetpoint(const void *msgin) {
         auv::control::chassis.setActuatorForces(forces);
         float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw};
         float actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
-        auv::control::chassis.setControlLevel(auv::ControlLevel::ACTUATOR, actual_p, actual_v);
+        auv::control::chassis.setControlLevel(auv::common::ControlLevel::ACTUATOR, actual_p, actual_v);
         taskEXIT_CRITICAL();
     } else if (level == 1) { // VEL
         taskENTER_CRITICAL();
         for (int i = 0; i < 4; i++) target_p[i] = val[i];
         float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw};
         float actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
-        auv::control::chassis.setControlLevel(auv::ControlLevel::VELOCITY, actual_p, actual_v);
+        auv::control::chassis.setControlLevel(auv::common::ControlLevel::VELOCITY, actual_p, actual_v);
         taskEXIT_CRITICAL();
     } else if (level == 0) { // POS
         taskENTER_CRITICAL();
@@ -89,7 +89,7 @@ void MicroRosTask::onZitSetpoint(const void *msgin) {
         }
         float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw};
         float actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
-        auv::control::chassis.setControlLevel(auv::ControlLevel::POSITION, actual_p, actual_v);
+        auv::control::chassis.setControlLevel(auv::common::ControlLevel::POSITION, actual_p, actual_v);
         taskEXIT_CRITICAL();
     }
 }
@@ -114,7 +114,7 @@ void MicroRosTask::onInsCommand(const void *msgin) {
         case 2: auv::device::ins_driver.setDvlPower(false); break;
         case 3: auv::device::ins_driver.restart(); break;
         case 4: auv::device::ins_driver.resetPosition(); break;
-        case 5: auv::device::ins_driver.setInitialPosition(30.0, 120.0); break;
+        case 5: auv::device::ins_driver.setInitialPosition(45.7749, 126.6765); break;
     }
 }
 
@@ -215,7 +215,7 @@ void MicroRosTask::run() {
                 if (now_ms - last_thr_pub_tick >= 33) { last_thr_pub_tick = now_ms; taskENTER_CRITICAL(); for (int i = 0; i < 4; i++) thr_buf_[i] = last_output_forces[i]; taskEXIT_CRITICAL(); rcl_publish(&thr_pub_, &thr_fb_msg_, NULL); }
                 if (now_ms - last_pos_pub_tick >= 33) { last_pos_pub_tick = now_ms; auto nav = auv::shared::snapshotNavState(); pos_buf_[0] = nav.x; pos_buf_[1] = nav.y; pos_buf_[2] = nav.z; pos_buf_[3] = nav.yaw; rcl_publish(&pos_pub_, &pos_fb_msg_, NULL); }
                 if (now_ms - last_status_pub_tick >= 100) {
-                    last_status_pub_tick = now_ms; auv::NavState nav = auv::shared::snapshotNavState();
+                    last_status_pub_tick = now_ms; auv::common::NavState nav = auv::shared::snapshotNavState();
                     taskENTER_CRITICAL();
                     status_msg_.is_armed = is_system_armed; status_msg_.arm_mode = (uint8_t)last_arm_heartbeat_data; status_msg_.control_level = (uint8_t)auv::control::chassis.getControlLevel();
                     status_msg_.ins_state = nav.imu_state; status_msg_.navigation_ready = auv::shared::isNavigationValid(nav); for (int i = 0; i < 4; i++) status_msg_.forces[i] = last_output_forces[i];

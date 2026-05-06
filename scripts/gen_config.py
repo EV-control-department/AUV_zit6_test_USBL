@@ -2,10 +2,26 @@ import json
 import os
 import sys
 
-def gen_header(json_path, hpp_path):
+def gen_header(json_path, out_path):
     with open(json_path, 'r') as f:
         config = json.load(f)
-    
+
+    # Accept either a file path or an output directory. If a directory is
+    # provided, generated headers will be placed into that directory.
+    if os.path.isdir(out_path):
+        out_dir = out_path
+        soft_watchdog_hpp = os.path.join(out_dir, 'SoftWatchdogConfig.hpp')
+    else:
+        # treat as a file path if it ends with .hpp, otherwise as dir
+        if out_path.endswith('.hpp'):
+            out_dir = os.path.dirname(out_path)
+            soft_watchdog_hpp = out_path
+        else:
+            out_dir = out_path
+            soft_watchdog_hpp = os.path.join(out_dir, 'SoftWatchdogConfig.hpp')
+
+    os.makedirs(out_dir, exist_ok=True)
+
     sw_config = config.get('soft_watchdog', {})
     timeout = sw_config.get('timeout_ms', 3000)
     check_microros = str(sw_config.get('check_microros', True)).lower()
@@ -16,6 +32,9 @@ def gen_header(json_path, hpp_path):
 #define __SOFT_WATCHDOG_CONFIG_HPP
 
 #include <stdint.h>
+
+namespace auv {{
+namespace config {{
 
 /**
  * @struct SoftWatchdogConfig
@@ -35,21 +54,23 @@ static const SoftWatchdogConfig DEFAULT_WATCHDOG_CONFIG = {{
     .check_depth = {check_depth}
 }};
 
+}} // namespace config
+}} // namespace auv
+
 #endif
 """
     
     # Write SoftWatchdog header only if changed to avoid unnecessary recompilation
     old = None
-    if os.path.exists(hpp_path):
-        with open(hpp_path, 'r') as f:
+    if os.path.exists(soft_watchdog_hpp):
+        with open(soft_watchdog_hpp, 'r') as f:
             old = f.read()
 
     if old != content:
-        with open(hpp_path, 'w') as f:
+        with open(soft_watchdog_hpp, 'w') as f:
             f.write(content)
 
     # Also generate chassis config header in the same directory
-    out_dir = os.path.dirname(hpp_path)
     chassis_hpp = os.path.join(out_dir, 'ChassisConfig.hpp')
 
     chassis_cfg = config.get('chassis', {})
@@ -79,6 +100,9 @@ static const SoftWatchdogConfig DEFAULT_WATCHDOG_CONFIG = {{
 #define __CHASSIS_CONFIG_HPP
 
 #include <stdint.h>
+
+namespace auv {{
+namespace config {{
 
 /**
  * @struct ChassisConfig
@@ -110,20 +134,63 @@ static const ChassisConfig DEFAULT_CHASSIS_CONFIG = {{
     .vel_pid = {{ .kp = {vel_kp}, .ki = {vel_ki}, .kd = {vel_kd}, .i_limit = {vel_i_limit}, .output_limit = {vel_output_limit}, .dt = {vel_dt} }},
 }};
 
+}} // namespace config
+}} // namespace auv
+
 #endif
 """
 
     # Only write if changed
+    write_chassis = True
     if os.path.exists(chassis_hpp):
         with open(chassis_hpp, 'r') as f:
             if f.read() == chassis_content:
+                write_chassis = False
+
+    if write_chassis:
+        with open(chassis_hpp, 'w') as f:
+            f.write(chassis_content)
+
+    # Generate SensorsConfig.hpp
+    z_data_sourse = config.get('z_data_sourse', 'use_ins_intergrated_z').lower()
+    z_enum = 'USE_MS5837_Z' if z_data_sourse == 'use_ms5837_z' else 'USE_INS_INTEGRATED_Z'
+
+    sensors_hpp = os.path.join(out_dir, 'SensorsConfig.hpp')
+    sensors_content = f"""#ifndef __SENSORS_CONFIG_HPP
+#define __SENSORS_CONFIG_HPP
+
+namespace auv {{
+namespace config {{
+
+enum class ZDataSource {{
+    USE_INS_INTEGRATED_Z,
+    USE_MS5837_Z
+}};
+
+struct SensorsConfig {{
+    ZDataSource z_data_source;
+}};
+
+static const SensorsConfig DEFAULT_SENSORS_CONFIG = {{
+    .z_data_source = ZDataSource::{z_enum}
+}};
+
+}} // namespace config
+}} // namespace auv
+
+#endif
+"""
+
+    if os.path.exists(sensors_hpp):
+        with open(sensors_hpp, 'r') as f:
+            if f.read() == sensors_content:
                 return
 
-    with open(chassis_hpp, 'w') as f:
-        f.write(chassis_content)
+    with open(sensors_hpp, 'w') as f:
+        f.write(sensors_content)
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("Usage: python gen_config.py <config.json> <output.hpp>")
+        print("Usage: python gen_config.py <config.json> <output_dir_or.hpp>")
         sys.exit(1)
     gen_header(sys.argv[1], sys.argv[2])

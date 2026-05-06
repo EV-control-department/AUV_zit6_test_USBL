@@ -1,1 +1,0 @@
-/home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/zit6_interfaces/msg/ZitPidStatus.msg

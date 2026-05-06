@@ -5,7 +5,7 @@
 #include "INS_Driver.hpp"
 #include "MotionController_Driver.hpp"
 #include "ChassisManager.hpp"
-#include "MS5837_Class.h"
+#include "MS5837_Class.hpp"
 #include "stm32h7xx_hal.h"
 
 // --- 硬件句柄 extern ---
@@ -48,13 +48,13 @@ extern uint32_t arm_heartbeat_count;
 extern uint32_t last_arm_heartbeat_ms;
 extern uint32_t last_arm_heartbeat_data;
 extern uint32_t arm_start_ms;
-extern auv::NavState shared_nav_state;
+extern auv::common::NavState shared_nav_state;
 
 // --- 公共辅助函数 ---
 namespace auv {
 namespace shared {
-    bool isNavigationValid(const NavState &nav);
-    NavState snapshotNavState();
+    bool isNavigationValid(const auv::common::NavState &nav);
+    auv::common::NavState snapshotNavState();
 }
 }
 

@@ -3,7 +3,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "SoftWatchdog.hpp"
-#include <math.h>
+#include <cmath>
 
 void UserApp_IICTask(void *argument) {
     auv::device::depth_sensor.Init();
@@ -21,7 +21,7 @@ void UserApp_IICTask(void *argument) {
                 auv::device::depth_sensor.Depth(&d);
 
                 bool valid = true;
-                if (isnan(d) || isinf(d)) valid = false;
+                if (!std::isfinite(d)) valid = false;
 
                 // If reading is exactly zero while we previously had a sensible depth,
                 // treat it as invalid (common symptom of I2C read returning zeros).

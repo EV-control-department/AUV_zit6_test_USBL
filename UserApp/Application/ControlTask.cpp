@@ -3,13 +3,14 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "SoftWatchdog.hpp"
+#include "SensorsConfig.hpp"
 #include <string.h>
 
 using namespace auv::device;
 using namespace auv::control;
 
 
-void ControlTask::fillActualState(const auv::NavState &nav, float (&actual_p)[4], float (&actual_v)[4]) {
+void ControlTask::fillActualState(const auv::common::NavState &nav, float (&actual_p)[4], float (&actual_v)[4]) {
     actual_p[0] = nav.x;
     actual_p[1] = nav.y;
     actual_p[2] = nav.z;
@@ -31,7 +32,7 @@ void ControlTask::run() {
         last_dt_ms = static_cast<float>(now - last_tick_);
         last_tick_ = now;
 
-        auv::NavState nav = updateNavigation();
+        auv::common::NavState nav = updateNavigation();
         handleArmState(nav, now);
         computeAndPublish(nav);
 
@@ -69,17 +70,19 @@ void ControlTask::refreshHardwareWatchdogIfNeeded() {
     }
 }
 
-auv::NavState ControlTask::updateNavigation() {
-    auv::NavState nav = auv::shared::snapshotNavState();
+auv::common::NavState ControlTask::updateNavigation() {
+    auv::common::NavState nav = auv::shared::snapshotNavState();
     ins_driver.update(nav);
 
-    // 保护读取全局深度快照，避免 IICTask 并发写导致短时 0 值
-    float depth_snapshot = 0.0f;
-    taskENTER_CRITICAL();
-    depth_snapshot = current_depth_z;
-    taskEXIT_CRITICAL();
+    // 根据配置选择是否使用独立的 MS5837 深度覆盖融合深度
+    if (auv::config::DEFAULT_SENSORS_CONFIG.z_data_source == auv::config::ZDataSource::USE_MS5837_Z) {
+        float depth_snapshot = 0.0f;
+        taskENTER_CRITICAL();
+        depth_snapshot = current_depth_z;
+        taskEXIT_CRITICAL();
 
-    nav.z = depth_snapshot;
+        nav.z = depth_snapshot;
+    }
 
     taskENTER_CRITICAL();
     shared_nav_state = nav;
@@ -88,14 +91,14 @@ auv::NavState ControlTask::updateNavigation() {
     return nav;
 }
 
-void ControlTask::setControlLevelNone(const auv::NavState &nav) {
+void ControlTask::setControlLevelNone(const auv::common::NavState &nav) {
     float actual_p[4];
     float actual_v[4];
     fillActualState(nav, actual_p, actual_v);
-    chassis.setControlLevel(auv::ControlLevel::NONE, actual_p, actual_v);
+    chassis.setControlLevel(auv::common::ControlLevel::NONE, actual_p, actual_v);
 }
 
-void ControlTask::forceDisarmWithNeutralLevel(const auv::NavState &nav) {
+void ControlTask::forceDisarmWithNeutralLevel(const auv::common::NavState &nav) {
     taskENTER_CRITICAL();
     is_system_armed = false;
     arm_heartbeat_count = 0;
@@ -103,7 +106,7 @@ void ControlTask::forceDisarmWithNeutralLevel(const auv::NavState &nav) {
     setControlLevelNone(nav);
 }
 
-void ControlTask::handleArmState(const auv::NavState &nav, uint32_t now) {
+void ControlTask::handleArmState(const auv::common::NavState &nav, uint32_t now) {
     taskENTER_CRITICAL();
     const bool armed_snapshot = is_system_armed;
     const uint32_t heartbeat_snapshot = last_arm_heartbeat_ms;
@@ -118,7 +121,7 @@ void ControlTask::handleArmState(const auv::NavState &nav, uint32_t now) {
         return;
     }
 
-    if (chassis.getControlLevel() != auv::ControlLevel::NONE) {
+    if (chassis.getControlLevel() != auv::common::ControlLevel::NONE) {
         setControlLevelNone(nav);
     }
 
@@ -146,7 +149,7 @@ void ControlTask::handleArmState(const auv::NavState &nav, uint32_t now) {
     }
 }
 
-void ControlTask::computeAndPublish(const auv::NavState &nav) {
+void ControlTask::computeAndPublish(const auv::common::NavState &nav) {
     float actual_p[4];
     float actual_v[4];
     fillActualState(nav, actual_p, actual_v);

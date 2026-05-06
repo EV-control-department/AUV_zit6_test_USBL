@@ -31,18 +31,18 @@ uint32_t arm_heartbeat_count = 0;
 uint32_t last_arm_heartbeat_ms = 0;
 uint32_t last_arm_heartbeat_data = 0;
 uint32_t arm_start_ms = 0;
-auv::NavState shared_nav_state{};
+auv::common::NavState shared_nav_state{};
 
 namespace auv {
 namespace shared {
 
-bool isNavigationValid(const auv::NavState &nav) {
+bool isNavigationValid(const auv::common::NavState &nav) {
     // 只要惯导进入 03 或 04 模式且数据新鲜，就认为 Ready
     return ((nav.imu_state == 3 || nav.imu_state == 4) && auv::device::ins_driver.isDataFresh());
 }
 
-auv::NavState snapshotNavState() {
-    auv::NavState nav;
+auv::common::NavState snapshotNavState() {
+    auv::common::NavState nav;
     taskENTER_CRITICAL();
     nav = shared_nav_state;
     taskEXIT_CRITICAL();

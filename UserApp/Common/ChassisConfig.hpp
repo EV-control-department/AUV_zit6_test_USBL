@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+namespace auv {
+namespace config {
+
 /**
  * @struct ChassisConfig
  * @brief 底盘默认参数配置 (Auto-generated from config.json)
@@ -32,5 +35,8 @@ static const ChassisConfig DEFAULT_CHASSIS_CONFIG = {
     .pos_pid = { .kp = 0.01, .ki = 0.0, .kd = 0.0, .i_limit = 1.0, .output_limit = 1.0, .dt = 0.01 },
     .vel_pid = { .kp = 0.01, .ki = 0.005, .kd = 0.01, .i_limit = 1.0, .output_limit = 1.0, .dt = 0.01 },
 };
+
+} // namespace config
+} // namespace auv
 
 #endif

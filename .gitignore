@@ -2,6 +2,8 @@
 build/
 bin/
 obj/
+install/
+log/
 
 # 静态库和临时文件
 *.elf

@@ -7,14 +7,14 @@ namespace auv {
 namespace control {
 
 ChassisManager::ChassisManager() {
-  applyConfig(DEFAULT_CHASSIS_CONFIG);
+  applyConfig(auv::config::DEFAULT_CHASSIS_CONFIG);
 }
 
-ChassisManager::ChassisManager(const ChassisConfig& cfg) {
+ChassisManager::ChassisManager(const auv::config::ChassisConfig& cfg) {
   applyConfig(cfg);
 }
 
-void ChassisManager::applyConfig(const ChassisConfig& cfg) {
+void ChassisManager::applyConfig(const auv::config::ChassisConfig& cfg) {
   config_ = cfg;
   for (int i = 0; i < 4; i++) {
     profiles_[i].setLimits(cfg.profile.default_max_v, cfg.profile.default_max_a);
@@ -39,7 +39,7 @@ void ChassisManager::applyConfig(const ChassisConfig& cfg) {
   }
 }
 
-ControlLevel ChassisManager::getControlLevel() const {
+auv::common::ControlLevel ChassisManager::getControlLevel() const {
   return level_;
 }
 
@@ -90,13 +90,13 @@ void ChassisManager::configurePID(int axis, bool is_pos_ring, float kp,
     vel_pids_[axis].setConfig(cfg);
 }
 
-void ChassisManager::setControlLevel(ControlLevel new_level,
+void ChassisManager::setControlLevel(auv::common::ControlLevel new_level,
                                      const float actual_p[4],
                                      const float actual_v[4]) {
   if (new_level == level_)
     return;
   // 切换到 POSITION：需要将影子平滑器与真实传感器对齐，且对 Z 轴采用积分继承策略
-  if (new_level == ControlLevel::POSITION) {
+  if (new_level == auv::common::ControlLevel::POSITION) {
     for (int i = 0; i < 4; i++) {
       profiles_[i].align(actual_p[i], actual_v[i]);
       if (i == 2) {
@@ -109,7 +109,7 @@ void ChassisManager::setControlLevel(ControlLevel new_level,
   }
 
   // 切换到 VELOCITY：对齐影子状态并清除速度环积分
-  else if (new_level == ControlLevel::VELOCITY) {
+  else if (new_level == auv::common::ControlLevel::VELOCITY) {
     for (int i = 0; i < 4; i++) {
       profiles_[i].align(actual_p[i], actual_v[i]);
       vel_pids_[i].reset();
@@ -117,12 +117,12 @@ void ChassisManager::setControlLevel(ControlLevel new_level,
   }
 
   // 切换到 ACTUATOR：只改变层级，不清空 target_forces_
-  else if (new_level == ControlLevel::ACTUATOR) {
+  else if (new_level == auv::common::ControlLevel::ACTUATOR) {
     // 保持 target_forces_ 不变，使外部直接写入的力能立即生效
   }
 
   // 切换到 NONE（安全停机）：清空目标推力
-  else if (new_level == ControlLevel::NONE) {
+  else if (new_level == auv::common::ControlLevel::NONE) {
     target_forces_.fill(0.0f);
   }
 
@@ -143,13 +143,13 @@ std::array<float, 4> ChassisManager::update(const float actual_p[4],
   if (dt > 0.1f) dt = 0.1f;
   if (dt <= 0.0f) dt = 0.001f;
 
-  if (level_ == ControlLevel::NONE)
+  if (level_ == auv::common::ControlLevel::NONE)
     return output_forces;
 
   std::array<float, 4> v_target_world = {0};
   for (int i = 0; i < 4; i++) {
     ProfileState d = profiles_[i].update(target_p[i], dt);
-    if (level_ == ControlLevel::POSITION) {
+    if (level_ == auv::common::ControlLevel::POSITION) {
       // 位置环的导数项使用速度误差 (v_ref - v_actual)
       float pos_derivative = d.v - actual_v[i];
       v_target_world[i] = pos_pids_[i].compute(d.p - actual_p[i], dt, pos_derivative) + d.v;
@@ -167,7 +167,7 @@ std::array<float, 4> ChassisManager::update(const float actual_p[4],
 
   for (int i = 0; i < 4; i++) {
     float f_base = 0.0f;
-    if (level_ == ControlLevel::POSITION || level_ == ControlLevel::VELOCITY) {
+    if (level_ == auv::common::ControlLevel::POSITION || level_ == auv::common::ControlLevel::VELOCITY) {
       // 使用机体系下的目标速度与真实速度进行闭环
       // 速度环导数项使用 (a_ref - a_actual)，其中 a_actual 由实际速度差分得到
       float a_ref = profiles_[i].getState().a;

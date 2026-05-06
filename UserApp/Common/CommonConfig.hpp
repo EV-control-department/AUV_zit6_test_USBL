@@ -3,7 +3,7 @@
  * @brief 全局通用数据结构与常量定义
  *
  * 职责：
- * 1. 定义跨模块传输的导航状态 (NavState)。
+ * 1. 定义跨模块传输的导航状态 (auv::common::NavState)。
  * 2. 定义控制层级枚举。
  * 3. 提供数学常数与物理参数。
  */
@@ -14,9 +14,10 @@
 #include <stdint.h>
 
 namespace auv {
+namespace common {
 
 /**
- * @struct NavState
+ * @struct auv::common::NavState
  * @brief 6-DOF 导航状态结构体
  */
 struct NavState {
@@ -45,7 +46,7 @@ struct NavState {
 };
 
 /**
- * @enum ControlLevel
+ * @enum auv::common::ControlLevel
  * @brief 任务层下发的控制强度级
  */
 enum class ControlLevel : uint8_t {
@@ -60,7 +61,7 @@ enum class ControlLevel : uint8_t {
  * @brief 上位机 CompactSetpoint 的内部解包结构
  */
 struct OffboardSetpoint {
-    ControlLevel level; ///< 期望层级
+    auv::common::ControlLevel level; ///< 期望层级
     float data[4];      ///< 目标数据 [x, y, z, yaw] 或 [vx, vy, vz, vyaw]
     uint32_t type_mask; ///< 类型掩码
 };
@@ -76,6 +77,7 @@ struct Constants {
     static constexpr float RAD2DEG = 57.2957795f;      ///< 弧度转角度
 };
 
+} // namespace common
 } // namespace auv
 
 #endif

@@ -17,17 +17,17 @@ namespace control {
 class ChassisManager {
 public:
     ChassisManager();
-    ChassisManager(const ChassisConfig& cfg);
+    ChassisManager(const auv::config::ChassisConfig& cfg);
 
     /**
      * @brief 应用外部配置（可用于运行时切换参数）
      */
-    void applyConfig(const ChassisConfig& cfg);
+    void applyConfig(const auv::config::ChassisConfig& cfg);
 
     /**
      * @brief 获取当前控制层级
      */
-    ControlLevel getControlLevel() const;
+    auv::common::ControlLevel getControlLevel() const;
 
     /**
      * @brief 执行 100Hz 级联控制演进 (自动计算 dt)
@@ -70,7 +70,7 @@ public:
      * @param actual_p 当前真实位置（用于对齐）
      * @param actual_v 当前真实速度（用于对齐）
      */
-    void setControlLevel(ControlLevel new_level, const float actual_p[4], const float actual_v[4]);
+    void setControlLevel(auv::common::ControlLevel new_level, const float actual_p[4], const float actual_v[4]);
 
     /**
      * @brief 直接设置执行器输出力 (作为 ACTUATOR 输出或闭环 Bias)
@@ -79,7 +79,7 @@ public:
     void setActuatorForces(const float forces[4]);
 
 private:
-    ControlLevel level_ = ControlLevel::NONE;
+    auv::common::ControlLevel level_ = auv::common::ControlLevel::NONE;
     
     std::array<KinematicProfile, 4> profiles_; ///< 4轴影子平滑器矩阵
     std::array<PID_Controller, 4> pos_pids_;  ///< 位置环 (P控制)
@@ -90,7 +90,7 @@ private:
     float last_z_thrust_ = 0.0f;               ///< 记录上周期的 Z 轴推力，用于 Trim Pre-loading
     std::array<float, 4> last_actual_v_ = {0}; ///< 上周期实际速度，用于计算加速度（用于 D 项）
     uint32_t last_update_tick_ = 0;            ///< 用于自动计算 dt
-    ChassisConfig config_ = DEFAULT_CHASSIS_CONFIG; ///< 当前应用的底盘参数
+    auv::config::ChassisConfig config_ = auv::config::DEFAULT_CHASSIS_CONFIG; ///< 当前应用的底盘参数
 };
 
 } // namespace control

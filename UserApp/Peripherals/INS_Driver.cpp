@@ -90,7 +90,7 @@ bool INS_Driver::isDataFresh() const {
     return (HAL_GetTick() - last_update_ms_ < 200);
 }
 
-bool INS_Driver::update(NavState& state) {
+bool INS_Driver::update(auv::common::NavState& state) {
     uint8_t temp_buf[256];
     uint16_t len = rx_port_.read(temp_buf, 256);
     bool has_new_frame = false;
@@ -148,7 +148,7 @@ bool INS_Driver::validateFrame() {
     return false;
 }
 
-void INS_Driver::decodePacket(NavState& s) {
+void INS_Driver::decodePacket(auv::common::NavState& s) {
     // 严格按照截图偏移量解析
     
     // 1. 姿态 (Offset 2, 6, 10)
@@ -173,8 +173,8 @@ void INS_Driver::decodePacket(NavState& s) {
     s.lat = lat_i * 1e-7;
     s.lon = lon_i * 1e-7;
 
-    // 5. 深度 (改为 Offset 107: 压力计数据) -> z
-    memcpy(&s.z, packet_buf_ + 107, 4);
+    // 5. 深度 (改为 Offset 46: 组合深度) -> z
+    memcpy(&s.z, packet_buf_ + 46, 4);
 
     // 6. 位置增量 (Offset 99, 103, float) -> x, y
     memcpy(&s.x, packet_buf_ + 99, 4);
