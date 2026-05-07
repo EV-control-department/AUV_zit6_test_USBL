@@ -1,12 +1,11 @@
 {
-  "z_data_sourse": "use_ins_intergrated_z",
+  "z_data_sourse": "use_ms5837_z",
   "soft_watchdog": {
     "timeout_ms": 3000,
     "check_microros": true,
     "check_ins": false,
     "check_depth": false
-  }
-  ,
+  },
   "chassis": {
     "profile": {
       "default_max_v": 0.5,

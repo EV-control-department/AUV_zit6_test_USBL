@@ -17,6 +17,8 @@
 #include <zit6_interfaces/msg/zit_status.h>
 #include <zit6_interfaces/msg/zit_pid.h>
 #include <zit6_interfaces/msg/zit_pid_status.h>
+#include <zit6_interfaces/srv/update_params.h>
+#include <zit6_interfaces/srv/get_params.h>
 
 class MicroRosTask {
 public:
@@ -45,6 +47,13 @@ private:
 	std_msgs__msg__UInt8 ins_cmd_msg_;
 	std_msgs__msg__UInt32 arm_msg_, node_heartbeat_msg_;
 
+	// services
+	rcl_service_t update_params_srv_, get_params_srv_;
+	zit6_interfaces__srv__UpdateParams_Request update_req_;
+	zit6_interfaces__srv__UpdateParams_Response update_res_;
+	zit6_interfaces__srv__GetParams_Request get_req_;
+	zit6_interfaces__srv__GetParams_Response get_res_;
+
 	float pos_buf_[4], vel_buf_[4], thr_buf_[4];
 
 	// 处理函数（原来位于匿名命名空间）
@@ -54,6 +63,8 @@ private:
 	void onInsCommand(const void *msgin);
 	void onServoCmd(const void *msgin);
 	void onLedCmd(const void *msgin);
+	void onUpdateParams(const void *req, rmw_request_id_t *req_id, void *res);
+	void onGetParams(const void *req, rmw_request_id_t *req_id, void *res);
 	void cleanupMicroRos();
 
 	// 静态回调封装（传入 rclc）
@@ -63,6 +74,8 @@ private:
 	static void insCmdCb(const void *msgin) { if (instance_) instance_->onInsCommand(msgin); }
 	static void servoCb(const void *msgin) { if (instance_) instance_->onServoCmd(msgin); }
 	static void ledCb(const void *msgin) { if (instance_) instance_->onLedCmd(msgin); }
+	static void updateParamsCb(const void *req, rmw_request_id_t *req_id, void *res) { if (instance_) instance_->onUpdateParams(req, req_id, res); }
+	static void getParamsCb(const void *req, rmw_request_id_t *req_id, void *res) { if (instance_) instance_->onGetParams(req, req_id, res); }
 };
 
 #endif // __MICROROS_TASK_HPP

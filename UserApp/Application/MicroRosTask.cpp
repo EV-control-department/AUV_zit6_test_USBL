@@ -20,6 +20,15 @@
 #include <zit6_interfaces/msg/zit_status.h>
 #include <zit6_interfaces/msg/zit_pid.h>
 #include <zit6_interfaces/msg/zit_pid_status.h>
+#include <zit6_interfaces/srv/update_params.h>
+#include <zit6_interfaces/srv/get_params.h>
+#include <rosidl_runtime_c/string_functions.h>
+#include <cstdlib>
+#include <cmath>
+#include <cstring>
+#include <cstdio>
+#include "SerialPort.hpp"
+#include "cJSON.h"
 
 extern "C" {
 bool cubemx_transport_open(struct uxrCustomTransport *transport);
@@ -32,8 +41,14 @@ void *microros_reallocate(void *ptr, size_t new_size, void *state);
 void *microros_zero_allocate(size_t number_of_elements, size_t size_t_of_element, void *state);
 }
 
+static void *cjson_malloc(size_t size) { return microros_allocate(size, NULL); }
+static void cjson_free(void *ptr) { microros_deallocate(ptr, NULL); }
+
 // 实例指针定义
 MicroRosTask *MicroRosTask::instance_ = nullptr;
+
+// debug serial (UART7) for on-target prints
+static auv::porting::SerialPort dbg_uart(&huart7);
 
 // --- 成员回调实现 ---
 void MicroRosTask::onZitPid(const void *msgin) {
@@ -128,8 +143,291 @@ void MicroRosTask::onLedCmd(const void *msgin) {
     auv::device::motor_driver.setLightState(msg->data);
 }
 
+// Helper: find matching closing brace for a block starting at the first '{' pointer
+static const char * find_matching_brace(const char *open) {
+    if (!open) return nullptr;
+    const char *p = open;
+    int depth = 0;
+    while (*p) {
+        if (*p == '{') depth++;
+        else if (*p == '}') {
+            depth--;
+            if (depth == 0) return p + 1;
+        }
+        p++;
+    }
+    return nullptr;
+}
+
+// Helper: search for a double value for `key` inside region [start, end)
+static bool find_double_in_region(const char *start, const char *end, const char *key, double *out) {
+    if (!start || !end || !key) return false;
+    const char *p = strstr(start, key);
+    while (p && p < end) {
+        const char *colon = strchr(p, ':');
+        if (!colon || colon >= end) return false;
+        char *endptr = nullptr;
+        double v = strtod(colon + 1, &endptr);
+        if (endptr != colon + 1) { *out = v; return true; }
+        p = strstr(p + 1, key);
+    }
+    return false;
+}
+
+// Helper: append a C-string into buffer at pos, ensuring null-termination
+static size_t append_str(char *buf, size_t bufsize, size_t pos, const char *s) {
+    if (!buf || bufsize == 0 || pos >= bufsize - 1) return pos;
+    if (!s) return pos;
+    size_t avail = bufsize - pos;
+    size_t len = strlen(s);
+    size_t cp = (len < avail - 1) ? len : (avail - 1);
+    memcpy(buf + pos, s, cp);
+    pos += cp;
+    buf[pos] = '\0';
+    return pos;
+}
+
+// Helper: append a float to buffer with fixed decimal precision without using %f
+static size_t append_float_fixed(char *buf, size_t bufsize, size_t pos, float v, int prec) {
+    if (!buf || bufsize == 0 || pos >= bufsize - 1) return pos;
+    if (isnan(v)) {
+        return append_str(buf, bufsize, pos, "nan");
+    }
+    if (isinf(v)) {
+        if (v < 0) return append_str(buf, bufsize, pos, "-inf");
+        return append_str(buf, bufsize, pos, "inf");
+    }
+    bool neg = false;
+    if (v < 0.0f) { neg = true; v = -v; }
+    unsigned long scale = 1UL;
+    for (int i = 0; i < prec; ++i) scale *= 10UL;
+    unsigned long scaled = (unsigned long)(v * (float)scale + 0.5f);
+    unsigned long intpart = scaled / scale;
+    unsigned long frac = scaled % scale;
+
+    char tmp[48];
+    int n = snprintf(tmp, sizeof(tmp), "%s%lu", neg ? "-" : "", intpart);
+    if (n > 0) {
+        size_t avail = bufsize - pos;
+        size_t cp = ((size_t)n < avail - 1) ? (size_t)n : (avail - 1);
+        memcpy(buf + pos, tmp, cp);
+        pos += cp;
+        buf[pos] = '\0';
+    }
+    if (prec > 0 && pos < bufsize - 1) {
+        buf[pos++] = '.';
+        // write fractional part with leading zeros
+        // compute digits of frac
+        char digits[32];
+        int d = 0;
+        if (frac == 0) {
+            digits[d++] = '0';
+        } else {
+            unsigned long t = frac;
+            while (t > 0 && d < (int)sizeof(digits)) { digits[d++] = (char)('0' + (t % 10)); t /= 10; }
+        }
+        int pad = prec - d;
+        while (pad-- > 0 && pos < bufsize - 1) buf[pos++] = '0';
+        for (int i = d - 1; i >= 0 && pos < bufsize - 1; --i) buf[pos++] = digits[i];
+        buf[pos] = '\0';
+    }
+    return pos;
+}
+
+void MicroRosTask::onUpdateParams(const void *reqin, rmw_request_id_t *req_id, void *resin) {
+    const auto *req = static_cast<const zit6_interfaces__srv__UpdateParams_Request *>(reqin);
+    auto *res = static_cast<zit6_interfaces__srv__UpdateParams_Response *>(resin);
+    if (!res) return;
+    res->success = false;
+    rosidl_runtime_c__String__assign(&res->message, "");
+
+    // debug entry
+    dbg_uart.transmit((const uint8_t*)"onUpdateParams called\r\n", 19);
+
+    // start from current chassis config (read axis 0 as representative)
+    auv::config::ChassisConfig cfg;
+    float v = 0.0f, a = 0.0f;
+    auv::control::chassis.getProfileLimits(0, v, a);
+    cfg.profile.default_max_v = v;
+    cfg.profile.default_max_a = a;
+    auto p_cfg = auv::control::chassis.getPIDConfig(0, true);
+    cfg.pos_pid.kp = p_cfg.kp; cfg.pos_pid.ki = p_cfg.ki; cfg.pos_pid.kd = p_cfg.kd; cfg.pos_pid.i_limit = p_cfg.i_limit; cfg.pos_pid.output_limit = p_cfg.output_limit; cfg.pos_pid.dt = p_cfg.dt;
+    auto vel_cfg = auv::control::chassis.getPIDConfig(0, false);
+    cfg.vel_pid.kp = vel_cfg.kp; cfg.vel_pid.ki = vel_cfg.ki; cfg.vel_pid.kd = vel_cfg.kd; cfg.vel_pid.i_limit = vel_cfg.i_limit; cfg.vel_pid.output_limit = vel_cfg.output_limit; cfg.vel_pid.dt = vel_cfg.dt;
+
+    // If JSON provided, prefer parsing it (use embedded cjson_min)
+    if (req->json.data && req->json.data[0] != '\0') {
+        const char *json = req->json.data;
+        cJSON *root = cJSON_Parse(json);
+        if (!root) {
+            rosidl_runtime_c__String__assign(&res->message, "json parse error");
+            res->success = false;
+            return;
+        }
+        cJSON *chassis = cJSON_GetObjectItemCaseSensitive(root, "chassis");
+        cJSON *ctx = chassis ? chassis : root;
+        bool updated = false;
+
+        cJSON *profile = cJSON_GetObjectItemCaseSensitive(ctx, "profile");
+        if (profile) {
+            cJSON *j = cJSON_GetObjectItemCaseSensitive(profile, "default_max_v");
+            if (j && cJSON_IsNumber(j)) { cfg.profile.default_max_v = (float)cJSON_GetNumberValue(j); updated = true; }
+            j = cJSON_GetObjectItemCaseSensitive(profile, "default_max_a");
+            if (j && cJSON_IsNumber(j)) { cfg.profile.default_max_a = (float)cJSON_GetNumberValue(j); updated = true; }
+        }
+
+        cJSON *pid = cJSON_GetObjectItemCaseSensitive(ctx, "pid");
+        if (pid) {
+            cJSON *pos = cJSON_GetObjectItemCaseSensitive(pid, "pos");
+            if (pos) {
+                cJSON *j = cJSON_GetObjectItemCaseSensitive(pos, "kp"); if (j && cJSON_IsNumber(j)) { cfg.pos_pid.kp = (float)cJSON_GetNumberValue(j); updated = true; }
+                j = cJSON_GetObjectItemCaseSensitive(pos, "ki"); if (j && cJSON_IsNumber(j)) { cfg.pos_pid.ki = (float)cJSON_GetNumberValue(j); updated = true; }
+                j = cJSON_GetObjectItemCaseSensitive(pos, "kd"); if (j && cJSON_IsNumber(j)) { cfg.pos_pid.kd = (float)cJSON_GetNumberValue(j); updated = true; }
+                j = cJSON_GetObjectItemCaseSensitive(pos, "i_limit"); if (j && cJSON_IsNumber(j)) { cfg.pos_pid.i_limit = (float)cJSON_GetNumberValue(j); updated = true; }
+                j = cJSON_GetObjectItemCaseSensitive(pos, "output_limit"); if (j && cJSON_IsNumber(j)) { cfg.pos_pid.output_limit = (float)cJSON_GetNumberValue(j); updated = true; }
+                j = cJSON_GetObjectItemCaseSensitive(pos, "dt"); if (j && cJSON_IsNumber(j)) { cfg.pos_pid.dt = (float)cJSON_GetNumberValue(j); updated = true; }
+            }
+            cJSON *vel = cJSON_GetObjectItemCaseSensitive(pid, "vel");
+            if (vel) {
+                cJSON *j = cJSON_GetObjectItemCaseSensitive(vel, "kp"); if (j && cJSON_IsNumber(j)) { cfg.vel_pid.kp = (float)cJSON_GetNumberValue(j); updated = true; }
+                j = cJSON_GetObjectItemCaseSensitive(vel, "ki"); if (j && cJSON_IsNumber(j)) { cfg.vel_pid.ki = (float)cJSON_GetNumberValue(j); updated = true; }
+                j = cJSON_GetObjectItemCaseSensitive(vel, "kd"); if (j && cJSON_IsNumber(j)) { cfg.vel_pid.kd = (float)cJSON_GetNumberValue(j); updated = true; }
+                j = cJSON_GetObjectItemCaseSensitive(vel, "i_limit"); if (j && cJSON_IsNumber(j)) { cfg.vel_pid.i_limit = (float)cJSON_GetNumberValue(j); updated = true; }
+                j = cJSON_GetObjectItemCaseSensitive(vel, "output_limit"); if (j && cJSON_IsNumber(j)) { cfg.vel_pid.output_limit = (float)cJSON_GetNumberValue(j); updated = true; }
+                j = cJSON_GetObjectItemCaseSensitive(vel, "dt"); if (j && cJSON_IsNumber(j)) { cfg.vel_pid.dt = (float)cJSON_GetNumberValue(j); updated = true; }
+            }
+        }
+
+        if (updated) {
+            taskENTER_CRITICAL();
+            auv::control::chassis.applyConfig(cfg);
+            taskEXIT_CRITICAL();
+            planner_replan_flag = true;
+            res->success = true;
+            rosidl_runtime_c__String__assign(&res->message, "ok");
+            cJSON_Delete(root);
+            return;
+        }
+        cJSON_Delete(root);
+    }
+
+    // Otherwise, try paths/values sequence update (simple mapping)
+    if (req->paths.data && req->values.data && req->paths.size > 0 && req->values.size == req->paths.size) {
+        for (size_t i = 0; i < req->paths.size; ++i) {
+            const char *path = req->paths.data[i].data;
+            const char *value = req->values.data[i].data;
+            if (!path || !value) continue;
+            // example supported paths (exact match)
+            if (strcmp(path, "chassis.profile.default_max_v") == 0) {
+                float fv = strtof(value, nullptr);
+                cfg.profile.default_max_v = fv;
+            } else if (strcmp(path, "chassis.profile.default_max_a") == 0) {
+                float fa = strtof(value, nullptr);
+                cfg.profile.default_max_a = fa;
+            } else if (strcmp(path, "chassis.pid.pos.kp") == 0) cfg.pos_pid.kp = strtof(value, nullptr);
+            else if (strcmp(path, "chassis.pid.pos.ki") == 0) cfg.pos_pid.ki = strtof(value, nullptr);
+            else if (strcmp(path, "chassis.pid.pos.kd") == 0) cfg.pos_pid.kd = strtof(value, nullptr);
+            else if (strcmp(path, "chassis.pid.vel.kp") == 0) cfg.vel_pid.kp = strtof(value, nullptr);
+            else if (strcmp(path, "chassis.pid.vel.ki") == 0) cfg.vel_pid.ki = strtof(value, nullptr);
+            else if (strcmp(path, "chassis.pid.vel.kd") == 0) cfg.vel_pid.kd = strtof(value, nullptr);
+        }
+        taskENTER_CRITICAL();
+        auv::control::chassis.applyConfig(cfg);
+        taskEXIT_CRITICAL();
+        planner_replan_flag = true;
+        res->success = true;
+        rosidl_runtime_c__String__assign(&res->message, "ok");
+        return;
+    }
+
+    // Provide richer diagnostic info when no-op: return json size/cap/pointer and first bytes
+    {
+        size_t json_strlen = 0;
+        size_t json_size = 0;
+        size_t json_cap = 0;
+        uintptr_t json_ptr = 0;
+        char head[129] = "";
+        if (req->json.data) {
+            json_ptr = (uintptr_t)req->json.data;
+            json_size = req->json.size;
+            json_cap = req->json.capacity;
+            // try to copy up to 128 bytes (not assuming NUL termination)
+            size_t cp = (json_size < (sizeof(head)-1)) ? json_size : (sizeof(head)-1);
+            if (cp > 0) {
+                memcpy(head, req->json.data, cp);
+                head[cp] = '\0';
+            }
+            // compute strlen of copied head (it's NUL-terminated at head[cp])
+            if (cp > 0) json_strlen = strlen(head);
+        }
+        size_t paths_cnt = req->paths.size;
+        size_t vals_cnt = req->values.size;
+        char diag[256];
+        int n = snprintf(diag, sizeof(diag), "json_len=%lu json_size=%lu cap=%lu ptr=0x%08lx paths=%lu values=%lu head=%s",
+            (unsigned long)json_strlen, (unsigned long)json_size, (unsigned long)json_cap, (unsigned long)json_ptr, (unsigned long)paths_cnt, (unsigned long)vals_cnt, head);
+        // echo to debug UART as well
+        if (n > 0) dbg_uart.transmit((const uint8_t*)diag, (uint16_t)(n>0?n:0));
+        dbg_uart.transmit((const uint8_t*)"\r\n", 2);
+        if (n > 0) rosidl_runtime_c__String__assign(&res->message, diag);
+        else rosidl_runtime_c__String__assign(&res->message, "no-op");
+        res->success = false;
+    }
+}
+
+void MicroRosTask::onGetParams(const void *reqin, rmw_request_id_t *req_id, void *resin) {
+    (void)reqin; (void)req_id;
+    auto *res = static_cast<zit6_interfaces__srv__GetParams_Response *>(resin);
+    if (!res) return;
+    // build simple JSON from current config (axis 0 as representative)
+    dbg_uart.transmit((const uint8_t*)"onGetParams called\r\n", 16);
+    float v = 0.0f, a = 0.0f;
+    auv::control::chassis.getProfileLimits(0, v, a);
+    auto p_cfg = auv::control::chassis.getPIDConfig(0, true);
+    auto vel_cfg = auv::control::chassis.getPIDConfig(0, false);
+    char buf[512];
+    size_t pos = 0;
+    pos = append_str(buf, sizeof(buf), pos, "{\"chassis\":{\"profile\":{\"default_max_v\":");
+    pos = append_float_fixed(buf, sizeof(buf), pos, v, 6);
+    pos = append_str(buf, sizeof(buf), pos, ",\"default_max_a\":");
+    pos = append_float_fixed(buf, sizeof(buf), pos, a, 6);
+    pos = append_str(buf, sizeof(buf), pos, "},\"pid\":{\"pos\":{\"kp\":");
+    pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.kp, 6);
+    pos = append_str(buf, sizeof(buf), pos, ",\"ki\":");
+    pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.ki, 6);
+    pos = append_str(buf, sizeof(buf), pos, ",\"kd\":");
+    pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.kd, 6);
+    pos = append_str(buf, sizeof(buf), pos, ",\"i_limit\":");
+    pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.i_limit, 6);
+    pos = append_str(buf, sizeof(buf), pos, ",\"output_limit\":");
+    pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.output_limit, 6);
+    pos = append_str(buf, sizeof(buf), pos, ",\"dt\":");
+    pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.dt, 6);
+    pos = append_str(buf, sizeof(buf), pos, "},\"vel\":{\"kp\":");
+    pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.kp, 6);
+    pos = append_str(buf, sizeof(buf), pos, ",\"ki\":");
+    pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.ki, 6);
+    pos = append_str(buf, sizeof(buf), pos, ",\"kd\":");
+    pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.kd, 6);
+    pos = append_str(buf, sizeof(buf), pos, ",\"i_limit\":");
+    pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.i_limit, 6);
+    pos = append_str(buf, sizeof(buf), pos, ",\"output_limit\":");
+    pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.output_limit, 6);
+    pos = append_str(buf, sizeof(buf), pos, ",\"dt\":");
+    pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.dt, 6);
+    pos = append_str(buf, sizeof(buf), pos, "}}}}");
+    if (pos > 0 && pos < sizeof(buf)) {
+        rosidl_runtime_c__String__assign(&res->config_json, buf);
+        res->success = true;
+    } else {
+        rosidl_runtime_c__String__assign(&res->config_json, "{}");
+        res->success = false;
+    }
+}
+
 void MicroRosTask::cleanupMicroRos() {
     rclc_executor_fini(&executor_);
+    rcl_service_fini(&update_params_srv_, &node_);
+    rcl_service_fini(&get_params_srv_, &node_);
     rcl_publisher_fini(&pos_pub_, &node_);
     rcl_publisher_fini(&vel_pub_, &node_);
     rcl_publisher_fini(&thr_pub_, &node_);
@@ -152,6 +450,13 @@ void MicroRosTask::cleanupMicroRos() {
 void MicroRosTask::run() {
     MicroRosTask::instance_ = this;
     rmw_uros_set_custom_transport(true, (void *)&huart2, cubemx_transport_open, cubemx_transport_close, cubemx_transport_write, cubemx_transport_read);
+    
+    // Initialize cJSON with micro-ROS allocators
+    cJSON_Hooks hooks;
+    hooks.malloc_fn = cjson_malloc;
+    hooks.free_fn = cjson_free;
+    cJSON_InitHooks(&hooks);
+
     rcutils_allocator_t allocator = rcutils_get_zero_initialized_allocator();
     allocator.allocate = microros_allocate; allocator.deallocate = microros_deallocate;
     allocator.reallocate = microros_reallocate; allocator.zero_allocate = microros_zero_allocate;
@@ -192,13 +497,68 @@ void MicroRosTask::run() {
                     rclc_subscription_init_default(&ins_cmd_sub_, &node_, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt8), "/zit6/cmd/ins");
                     rclc_subscription_init_default(&pid_sub_, &node_, ROSIDL_GET_MSG_TYPE_SUPPORT(zit6_interfaces, msg, ZitPid), "/zit6/cmd/pid");
 
-                    rclc_executor_init(&executor_, &support_.context, 12, &rcl_allocator);
+                    rclc_executor_init(&executor_, &support_.context, 20, &rcl_allocator);
                     rclc_executor_add_subscription(&executor_, &setpoint_sub_, &setpoint_msg_, &MicroRosTask::setpointCb, ON_NEW_DATA);
                     rclc_executor_add_subscription(&executor_, &arm_sub_, &arm_msg_, &MicroRosTask::armCb, ON_NEW_DATA);
                     rclc_executor_add_subscription(&executor_, &ins_cmd_sub_, &ins_cmd_msg_, &MicroRosTask::insCmdCb, ON_NEW_DATA);
                     rclc_executor_add_subscription(&executor_, &pid_sub_, &pid_msg_, &MicroRosTask::zitPidCb, ON_NEW_DATA);
                     rclc_executor_add_subscription(&executor_, &servo_sub_, &servo_msg_, &MicroRosTask::servoCb, ON_NEW_DATA);
                     rclc_executor_add_subscription(&executor_, &led_sub_, &led_msg_, &MicroRosTask::ledCb, ON_NEW_DATA);
+                    // Initialize services for parameter update and query
+                    // Initialize update_params service and check return codes
+                    {
+                        rcl_ret_t rc = rclc_service_init_default(&update_params_srv_, &node_, ROSIDL_GET_SRV_TYPE_SUPPORT(zit6_interfaces, srv, UpdateParams), "/zit6/update_params");
+                        char tmp[128]; int n = 0;
+                        if (rc != RCL_RET_OK) {
+                            n = snprintf(tmp, sizeof(tmp), "svc init update_params failed: %d\r\n", (int)rc);
+                            dbg_uart.transmit((const uint8_t*)tmp, (uint16_t)(n>0?n:0));
+                        } else {
+                            n = snprintf(tmp, sizeof(tmp), "svc init update_params ok\r\n");
+                            dbg_uart.transmit((const uint8_t*)tmp, (uint16_t)(n>0?n:0));
+                        }
+                        zit6_interfaces__srv__UpdateParams_Request__init(&update_req_);
+                        // Pre-allocate buffer for incoming JSON string
+                        update_req_.json.data = (char*)microros_allocate(1024, NULL);
+                        update_req_.json.capacity = 1024;
+                        update_req_.json.size = 0;
+
+                        zit6_interfaces__srv__UpdateParams_Response__init(&update_res_);
+                        rc = rclc_executor_add_service_with_request_id(&executor_, &update_params_srv_, &update_req_, &update_res_, &MicroRosTask::updateParamsCb);
+                        if (rc != RCL_RET_OK) {
+                            n = snprintf(tmp, sizeof(tmp), "add svc update_params failed: %d\r\n", (int)rc);
+                            dbg_uart.transmit((const uint8_t*)tmp, (uint16_t)(n>0?n:0));
+                        } else {
+                            n = snprintf(tmp, sizeof(tmp), "add svc update_params ok\r\n");
+                            dbg_uart.transmit((const uint8_t*)tmp, (uint16_t)(n>0?n:0));
+                        }
+                    }
+
+                    // Initialize get_params service and check return codes
+                    {
+                        rcl_ret_t rc = rclc_service_init_default(&get_params_srv_, &node_, ROSIDL_GET_SRV_TYPE_SUPPORT(zit6_interfaces, srv, GetParams), "/zit6/get_params");
+                        char tmp[128]; int n = 0;
+                        if (rc != RCL_RET_OK) {
+                            n = snprintf(tmp, sizeof(tmp), "svc init get_params failed: %d\r\n", (int)rc);
+                            dbg_uart.transmit((const uint8_t*)tmp, (uint16_t)(n>0?n:0));
+                        } else {
+                            n = snprintf(tmp, sizeof(tmp), "svc init get_params ok\r\n");
+                            dbg_uart.transmit((const uint8_t*)tmp, (uint16_t)(n>0?n:0));
+                        }
+                        zit6_interfaces__srv__GetParams_Request__init(&get_req_);
+                        zit6_interfaces__srv__GetParams_Response__init(&get_res_);
+                        // Pre-allocate buffer for outgoing JSON string
+                        get_res_.config_json.data = (char*)microros_allocate(1024, NULL);
+                        get_res_.config_json.capacity = 1024;
+                        get_res_.config_json.size = 0;
+                        rc = rclc_executor_add_service_with_request_id(&executor_, &get_params_srv_, &get_req_, &get_res_, &MicroRosTask::getParamsCb);
+                        if (rc != RCL_RET_OK) {
+                            n = snprintf(tmp, sizeof(tmp), "add svc get_params failed: %d\r\n", (int)rc);
+                            dbg_uart.transmit((const uint8_t*)tmp, (uint16_t)(n>0?n:0));
+                        } else {
+                            n = snprintf(tmp, sizeof(tmp), "add svc get_params ok\r\n");
+                            dbg_uart.transmit((const uint8_t*)tmp, (uint16_t)(n>0?n:0));
+                        }
+                    }
                     state = AGENT_CONNECTED;
                 }
             } else vTaskDelay(pdMS_TO_TICKS(100));

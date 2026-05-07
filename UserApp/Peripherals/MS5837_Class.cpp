@@ -41,7 +41,6 @@ void MS5837::Init(void)
 
     if (crcCalculated != crcRead) {
         is_connected = false;
-        Error_Handler();
     }
     else {
         is_connected = true;

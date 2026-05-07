@@ -14,7 +14,7 @@ struct SensorsConfig {
 };
 
 static const SensorsConfig DEFAULT_SENSORS_CONFIG = {
-    .z_data_source = ZDataSource::USE_INS_INTEGRATED_Z
+    .z_data_source = ZDataSource::USE_MS5837_Z
 };
 
 } // namespace config

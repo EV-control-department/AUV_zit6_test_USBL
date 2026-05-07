@@ -25,6 +25,7 @@ float last_output_forces[4] = {0.0f, 0.0f, 0.0f, 0.0f};
 float last_dt_ms = 0.0f;
 uint32_t last_received_seq = 0;
 float current_depth_z = 0.0f;
+volatile bool planner_replan_flag = false;
 
 bool is_system_armed = false;
 uint32_t arm_heartbeat_count = 0;

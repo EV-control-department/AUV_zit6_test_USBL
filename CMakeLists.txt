@@ -38,7 +38,8 @@ set(CMAKE_PROJECT_NAME AUV_zit6)
 set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
 # Core project settings
-project(${CMAKE_PROJECT_NAME} LANGUAGES C CXX ASM)
+# Use literal project name so colcon can identify the package correctly
+project(AUV_zit6 LANGUAGES C CXX ASM)
 message("Build type: " ${CMAKE_BUILD_TYPE})
 
 # Enable CMake support for ASM, C and C++ languages
@@ -80,6 +81,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     UserApp/Peripherals/MotionController_Driver.cpp
     UserApp/Peripherals/MS5837_Class.cpp
     UserApp/Porting/SerialPort.cpp
+    UserApp/Porting/cJSON.c
     UserApp/Control/ChassisManager.cpp
     UserApp/Control/PID_Controller.cpp
     UserApp/Control/KinematicProfile.cpp
