@@ -1,7 +1,7 @@
 #ifndef __SOFT_WATCHDOG_HPP
 #define __SOFT_WATCHDOG_HPP
 
-#include "SoftWatchdogConfig.hpp"
+#include "SystemConfig.hpp"
 #include <stdint.h>
 
 namespace auv {
@@ -29,7 +29,7 @@ public:
      * @brief 初始化看门狗
      * @param config 配置项
      */
-    void init(const auv::config::SoftWatchdogConfig& config = auv::config::DEFAULT_WATCHDOG_CONFIG);
+    void init(const auv::config::SoftWatchdogConfig& config = auv::config::SoftWatchdogConfig());
 
     /**
      * @brief 喂狗 (针对特定组件)

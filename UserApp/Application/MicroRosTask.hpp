@@ -19,6 +19,7 @@
 #include <zit6_interfaces/msg/zit_pid_status.h>
 #include <zit6_interfaces/srv/update_params.h>
 #include <zit6_interfaces/srv/get_params.h>
+#include "SystemConfig.hpp"
 
 class MicroRosTask {
 public:

@@ -17,7 +17,7 @@ def main():
 
     req = GetParams.Request()
     # paths is string[] — provide a list. Empty list requests full config.
-    req.paths = ['chassis.pid.pos.kp']
+    req.paths = []
 
     future = client.call_async(req)
 

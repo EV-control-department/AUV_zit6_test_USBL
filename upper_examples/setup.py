@@ -26,6 +26,7 @@ setup(
         'console_scripts': [
             'pid_setter = upper_examples.pidset:main',
             'pid_getter = upper_examples.pidget:main',
+            'config_gui = upper_examples.config_gui:main',
         ],
     },
 )

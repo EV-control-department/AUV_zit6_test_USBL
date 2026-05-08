@@ -6,6 +6,7 @@
 #include "MotionController_Driver.hpp"
 #include "ChassisManager.hpp"
 #include "MS5837_Class.hpp"
+#include "SystemConfig.hpp"
 #include "stm32h7xx_hal.h"
 
 // --- 硬件句柄 extern ---
@@ -42,6 +43,13 @@ extern float last_dt_ms;
 extern uint32_t last_received_seq;
 extern float current_depth_z;
 extern volatile bool planner_replan_flag;
+
+// --- 全局配置实例 ---
+namespace auv {
+namespace config {
+    // sys_config 及其注册表在 SystemConfig.cpp 中定义
+}
+}
 
 // --- 安全 ARM 状态机变量 ---
 extern bool is_system_armed;

@@ -76,6 +76,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     UserApp/Application/MicroRosTask.cpp
     UserApp/Application/IICTask.cpp
     UserApp/Common/GlobalContext.cpp
+    UserApp/Common/SystemConfig.cpp
+    UserApp/Common/ConfigService.cpp
     UserApp/Peripherals/SoftWatchdog.cpp
     UserApp/Peripherals/INS_Driver.cpp
     UserApp/Peripherals/MotionController_Driver.cpp

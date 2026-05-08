@@ -1,4 +1,4 @@
-# ZIT6 AUV 通讯协议规范 (v5.0 - 自定义消息版)
+# ZIT6 AUV 通讯协议规范 (2026.5.8)
 
 本文件为 ZIT6 AUV 与嵌入式固件之间的通信规范（自定义消息），包含字段含义、单位、取值范围、推荐频率以及从上电到初始化再到解锁（arm）的完整流程说明。
 
@@ -24,8 +24,8 @@
 - `uint8 control_key`：控制模式与标志位组合
     - 低2位（bits0-1）：模式（0=POS位置, 1=VEL速度, 2=FORCE推力, 3=保留）
     - Bit4 (0x10)：目标为机体系（body）坐标；未置位则为世界系（world）
-    - Bit5 (0x20)：增量模式（表示 x/y/z/yaw 为
-    相对量而非绝对量）
+    - Bit5 (0x20)：增量模式（表示 x/y/z/yaw 为相对量而非绝对量）。
+        - 在机体系增量模式下，x/y 将基于当前航向角转换到世界系后再进行位置累加。
 
 - `uint8 type_mask`：轴掩码（按位）
     - 1：X轴，2：Y轴，4：Z轴，8：Yaw（偏航）
@@ -43,25 +43,42 @@
 
 注意：发送端应确保不发送 NaN/Inf。嵌入式在收到不合法数值时应拒绝并在 `/zit6/state/status` 中标注错误标志。
 
-- 话题：`/zit6/cmd/pid`
-    - 类型：`zit6_interfaces/ZitPid`
-    - 描述：动态配置指定轴与控制环的 PID 参数。支持在不重启固件的情况下进行在线调优。
+- 话题：`/zit6/cmd/ins`
+    - 类型：`std_msgs/UInt8`
+    - 描述：INS 指令 （1:开启dvl,2:关闭dvl,3:重启惯导,4.（待验证）装订经纬度）
 
-### 1.2 `ZitPid` 消息定义与字段说明
-该消息支持**局部参数更新**逻辑：若某个浮点数字段为**负值**，固件将自动滤除该项，维持当前生效的参数值不变。
+- 话题：`/zit6/cmd/light`
+    - 类型：`std_msgs/UInt8`
+    - 描述：LED 灯控制指令。（1.红2.黄3.绿）
 
-- `uint8 axis`：轴索引 (0: X, 1: Y, 2: Z, 3: Yaw)
-- `bool is_pos_ring`：选择控制环 (true: 位置环, false: 速度环)
-- **当 `is_pos_ring == true` (位置环配置) 时**：
-    - `kp`：位置环比例增益（若 < 0 则不修改）。
-    - `max_v, max_a`：规划器物理限值（若 < 0 则不修改）。
-- **当 `is_pos_ring == false` (速度环配置) 时**：
-    - `kp, ki, kd`：速度环 PID 参数（若 < 0 则不修改）。
-    - `i_limit, out_limit`：限幅参数（若 < 0 则不修改）。
+- 话题：`/zit6/cmd/servo`
+    - 类型：`std_msgs/Float32`
+    - 描述：舵机角度控制指令。（单位为rad）
+
+- 话题：`/zit6/cmd/agxhbt`
+    - 类型：`std_msgs/UInt32`
+    - 描述：上位机心跳，用于解锁（ARM）逻辑。（保证有10Hz以上持续心跳 1:普通解锁（需要ins精校准完成） 2.（保留）3.推力解锁（无需ins）
+---
+
+## 2. 配置与控制服务 (Service Specifications)
+
+服务提供同步的配置交互，适用于需要确认执行结果或获取复杂结构数据的场景。
+
+- 服务：`/zit6/update_params`
+    - 类型：`zit6_interfaces/UpdateParams`
+    - 描述：全量或增量更新系统配置（JSON 格式）。
+    - **请求字段**：`string json`。包含要更新的参数（如 `{"chassis":{"pid":{"pos":{"kp":0.02}}}}`）。
+    - **响应字段**：`bool success`, `string message`。
+
+- 服务：`/zit6/get_params`
+    - 类型：`zit6_interfaces/GetParams`
+    - 描述：按需查询系统当前参数。
+    - **请求字段**：`string[] paths`。路径数组（如 `["chassis.pid.pos"]`（目前这个还在调试，可返回空，详细见examples.md），若为空则返回全量配置。
+    - **响应字段**：`bool success`, `string config_json`。返回包含所请求路径的最小化 JSON。
 
 ---
 
-## 2. 状态反馈 (State Topics)
+## 3. 状态反馈 (State Topics)
 
 嵌入式定期/事件触发地发布自身状态供上位机监控与决策。
 
@@ -70,7 +87,7 @@
     - 推荐频率：10Hz
     - 描述：核心状态汇总，必须包含安全与运行态信息。
 
-- 话题：`/zit6/state/pid_status`
+- 话题（已弃用）：`/zit6/state/pid_status`
     - 类型：`zit6_interfaces/ZitPidStatus`
     - 推荐频率：1Hz
     - 描述：全轴 PID 与运动学规划器参数回传大包，用于直观确认系统当前的所有控制参数。
@@ -78,93 +95,60 @@
 - 话题：`/zit6/state/zithbt`
     - 类型：`std_msgs/UInt32`
     - 推荐频率：10Hz
-    - 描述：节点/链路心跳，用于上位机确认 micro-ROS 节点仍然在线；可携带毫秒级递增计数或时间戳。
+    - 描述：节点/链路心跳（暂且未使用上）
 
-### 2.1 `ZitStatus` 消息定义与字段说明
-- `bool is_armed`：是否已解锁（允许执行推力输出）
+- 话题：`/zit6/state/zit_status`
+    - `bool is_armed`：是否已解锁（允许执行推力输出）
 
-- `uint8 arm_mode`：解锁模式
-    - 0: DEFAULT（默认模式，需导航就绪），3: REMOTE（遥控模式，绕过导航就绪检查）
+    - `uint8 arm_mode`：解锁模式
+        - 0: DEFAULT（默认模式，需导航就绪），3: REMOTE（遥控模式，绕过导航就绪检查）
 
-- `uint8 control_level`：当前控制层级
-    - 0: NONE（无人控/安全停），1: POS（位置环），2: VEL（速度环），3: FORCE（推力环）
+    - `uint8 control_level`：当前控制层级
+        - 0: NONE（无人控/安全停），1: POS（位置环），2: VEL（速度环），3: FORCE（推力环）
 
-- `uint8 ins_state`：惯导内部状态 (0:待机, 1:粗对准, 2:精对准, 3:SINS/GPS/DVL, 4:SINS/DVL, 5:MRU)
+    - `uint8 ins_state`：惯导内部状态 (0:待机, 1:粗对准, 2:精对准, 3:SINS/GPS/DVL, 4:SINS/DVL, 5:MRU)
 
-- `bool navigation_ready`：导航准备就绪（惯导、DVL、水声或其他定位子系统健康并对准）
+    - `bool navigation_ready`：导航准备就绪（惯导、DVL、水声或其他定位子系统健康并对准）
 
-- `float32 forces[4]`：四个推进器的实际推力或归一化输出
-    - 单位：N（如为百分比则标注为 [-1,1]）
+    - `float32 forces[4]`：四个推进器的实际推力或归一化输出
+        - 单位：N（如为百分比则标注为 [-1,1]）
 
-- `float32 cycle_time_ms`：控制主循环耗时，单位毫秒（ms）
+    - `float32 cycle_time_ms`：控制主循环耗时，单位毫秒（未启用，保留）
 
-- `float32 battery_voltage`：电池电压，单位伏（V）
+    - `float32 battery_voltage`：电池电压，单位伏（未启用，保留）
 
-- `uint32 error_flags`：位域错误/警告标识位（详见下表）
-    - Bit0: 强制停机（致命）
-    - Bit1: 传感器故障（IMU/DVL）
-    - Bit2: 电压异常
-    - Bit3: 通讯超时
-    - 其余位保留
-
-示例：当 `is_armed=false` 且 `error_flags!=0`，上位机应停止发送期望推力并尝试复位或人工干预。
+    - `uint32 error_flags`：位域错误/警告标识位（未启用）
+        - Bit0: 强制停机（致命）
+        - Bit1: 传感器故障（IMU/DVL）
+        - Bit2: 电压异常
+        - Bit3: 通讯超时
+        - 其余位保留
 
 - 话题：`/zit6/state/vel`
     - 类型：`Float32MultiArray`
     - 推荐频率：60Hz
-    - 描述：机体系速度 [vx, vy, vz]，单位 m/s；可附加角速度 [wx, wy, wz]（rad/s）作为扩展
-
+    - 描述：机体系速度 [vx, vy, vz,vyaw]，单位 m/s,rad/s；
 - 话题：`/zit6/state/pos`
     - 类型：`Float32MultiArray`
     - 推荐频率：30Hz
-    - 描述：世界系位置 [x, y, z]（m）与航向 yaw（rad）
+    - 描述：世界系位置 [x, y, z, yaw] m/s,rad/s
 
 - 话题：`/zit6/state/thr`
     - 类型：`Float32MultiArray`
     - 推荐频率：30Hz
-    - 描述：实际输出推力数组，对应推进器顺序及单位（N 或 [-1,1]）
+    - 描述：机体系归一化推力 [fx,fy,fz,fyaw]
 
-- 话题：`/zit6/state/isarm`
-    - 类型：`Bool`
-    - 推荐频率：10Hz
-    - 描述：简洁的解锁位镜像（便于 RQT 快速显示）
 
----
-
-## 3. QoS 与可靠性建议
-- 对于控制命令 `/zit6/cmd/setpoint`：建议使用可靠传输（ROS2 QoS: best_effort=false, depth=10），但在带宽受限场景可调整为 best_effort
-- 状态反馈可使用 `reliable` 或 `best_effort` 视需求：关键安全状态（`/zit6/state/status`）应为 reliable
-- 所有话题应在消息中包含时间戳字段以便回放与对齐
-
----
-
-## 4. 编译与集成说明（快速参考）
-
-1. 上位机编译：在 AGX 上进入工作空间，运行
-
-```
-colcon build --packages-select zit6_interfaces
-```
-
-2. STM32 编译：将 `zit6_interfaces` 的头文件与生成的 C 绑定添加到 micro-ROS 的构建配置中并重新生成静态库。
-     - 确保 STM32 项目的 include 路径包含 `zit6_interfaces/msg/` 下的头文件（例如 `zit_setpoint.h`）
-
----
-
-## 5. 上电 → 初始化 → 解锁（ARM）完整流程
+## 3. 上电 → 初始化 → 解锁（ARM）完整流程
 
 下面按时间顺序描述固件从上电到允许实际推力输出的完整、可审计流程，包含检查项、超时与示例消息交互。
 
 步骤概览：
-1. 硬件上电（Power-On）
-2. Bootloader / 启动代码
-3. HAL 与外设初始化
-4. 传感器自检与标定
-5. 通信堆栈与 micro-ROS 节点启动
-6. 上位机与嵌入式握手（心跳/参数同步）
-7. 预解锁检查（安全条件确认）
-8. AGX 发起解锁命令（arm）
-9. 嵌入式执行解锁并发布状态
+1. auv上电（Power-On）
+2. 上位机（取决于谁连上zit6->uart2tty->usbhub->）启动dds agent(具体见examples.md)
+3. 若有ins,下发/zit6/cmd/ins
+4. ins校准完全后下发/zit6/cmd/setpoint
+7. 任何突发情况停止心跳包下发即可
 
 详细流程：
 

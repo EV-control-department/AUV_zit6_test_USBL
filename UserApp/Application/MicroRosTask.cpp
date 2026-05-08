@@ -28,6 +28,7 @@
 #include <cstring>
 #include <cstdio>
 #include "cJSON.h"
+#include "ConfigService.hpp"
 
 extern "C" {
 bool cubemx_transport_open(struct uxrCustomTransport *transport);
@@ -127,7 +128,7 @@ void MicroRosTask::onInsCommand(const void *msgin) {
         case 2: auv::device::ins_driver.setDvlPower(false); break;
         case 3: auv::device::ins_driver.restart(); break;
         case 4: auv::device::ins_driver.resetPosition(); break;
-        case 5: auv::device::ins_driver.setInitialPosition(45.7749, 126.6765); break;
+        case 5: auv::device::ins_driver.setInitialPosition(auv::config::sys_config.ins.init_lat, auv::config::sys_config.ins.init_lon); break;
     }
 }
 
@@ -141,427 +142,42 @@ void MicroRosTask::onLedCmd(const void *msgin) {
     auv::device::motor_driver.setLightState(msg->data);
 }
 
-// Helper: find matching closing brace for a block starting at the first '{' pointer
-static const char * find_matching_brace(const char *open) {
-    if (!open) return nullptr;
-    const char *p = open;
-    int depth = 0;
-    while (*p) {
-        if (*p == '{') depth++;
-        else if (*p == '}') {
-            depth--;
-            if (depth == 0) return p + 1;
-        }
-        p++;
-    }
-    return nullptr;
-}
-
-// Helper: search for a double value for `key` inside region [start, end)
-static bool find_double_in_region(const char *start, const char *end, const char *key, double *out) {
-    if (!start || !end || !key) return false;
-    const char *p = strstr(start, key);
-    while (p && p < end) {
-        const char *colon = strchr(p, ':');
-        if (!colon || colon >= end) return false;
-        char *endptr = nullptr;
-        double v = strtod(colon + 1, &endptr);
-        if (endptr != colon + 1) { *out = v; return true; }
-        p = strstr(p + 1, key);
-    }
-    return false;
-}
-
-// Helper: append a C-string into buffer at pos, ensuring null-termination
-static size_t append_str(char *buf, size_t bufsize, size_t pos, const char *s) {
-    if (!buf || bufsize == 0 || pos >= bufsize - 1) return pos;
-    if (!s) return pos;
-    size_t avail = bufsize - pos;
-    size_t len = strlen(s);
-    size_t cp = (len < avail - 1) ? len : (avail - 1);
-    memcpy(buf + pos, s, cp);
-    pos += cp;
-    buf[pos] = '\0';
-    return pos;
-}
-
-// Helper: append a float to buffer with fixed decimal precision without using %f
-static size_t append_float_fixed(char *buf, size_t bufsize, size_t pos, float v, int prec) {
-    if (!buf || bufsize == 0 || pos >= bufsize - 1) return pos;
-    if (isnan(v)) {
-        return append_str(buf, bufsize, pos, "nan");
-    }
-    if (isinf(v)) {
-        if (v < 0) return append_str(buf, bufsize, pos, "-inf");
-        return append_str(buf, bufsize, pos, "inf");
-    }
-    bool neg = false;
-    if (v < 0.0f) { neg = true; v = -v; }
-    unsigned long scale = 1UL;
-    for (int i = 0; i < prec; ++i) scale *= 10UL;
-    unsigned long scaled = (unsigned long)(v * (float)scale + 0.5f);
-    unsigned long intpart = scaled / scale;
-    unsigned long frac = scaled % scale;
-
-    char tmp[48];
-    int n = snprintf(tmp, sizeof(tmp), "%s%lu", neg ? "-" : "", intpart);
-    if (n > 0) {
-        size_t avail = bufsize - pos;
-        size_t cp = ((size_t)n < avail - 1) ? (size_t)n : (avail - 1);
-        memcpy(buf + pos, tmp, cp);
-        pos += cp;
-        buf[pos] = '\0';
-    }
-    if (prec > 0 && pos < bufsize - 1) {
-        buf[pos++] = '.';
-        // write fractional part with leading zeros
-        // compute digits of frac
-        char digits[32];
-        int d = 0;
-        if (frac == 0) {
-            digits[d++] = '0';
-        } else {
-            unsigned long t = frac;
-            while (t > 0 && d < (int)sizeof(digits)) { digits[d++] = (char)('0' + (t % 10)); t /= 10; }
-        }
-        int pad = prec - d;
-        while (pad-- > 0 && pos < bufsize - 1) buf[pos++] = '0';
-        for (int i = d - 1; i >= 0 && pos < bufsize - 1; --i) buf[pos++] = digits[i];
-        buf[pos] = '\0';
-    }
-    return pos;
-}
-
 void MicroRosTask::onUpdateParams(const void *reqin, rmw_request_id_t *req_id, void *resin) {
+    (void)req_id;
     auto *res = static_cast<zit6_interfaces__srv__UpdateParams_Response *>(resin);
-    if (!res) return;
-    res->success = false;
-    rosidl_runtime_c__String__assign(&res->message, "");
-    if (!reqin) {
-        rosidl_runtime_c__String__assign(&res->message, "null request");
-        return;
-    }
     const auto *req = static_cast<const zit6_interfaces__srv__UpdateParams_Request *>(reqin);
+    if (!res || !req) return;
 
-    // avoid blocking UART in service callback: do not perform blocking dbg serial transmit here
-
-    // start from current chassis config (read axis 0 as representative)
-    auv::config::ChassisConfig cfg;
-    float v = 0.0f, a = 0.0f;
-    auv::control::chassis.getProfileLimits(0, v, a);
-    cfg.profile.default_max_v = v;
-    cfg.profile.default_max_a = a;
-    auto p_cfg = auv::control::chassis.getPIDConfig(0, true);
-    cfg.pos_pid.kp = p_cfg.kp; cfg.pos_pid.ki = p_cfg.ki; cfg.pos_pid.kd = p_cfg.kd; cfg.pos_pid.i_limit = p_cfg.i_limit; cfg.pos_pid.output_limit = p_cfg.output_limit; cfg.pos_pid.dt = p_cfg.dt;
-    auto vel_cfg = auv::control::chassis.getPIDConfig(0, false);
-    cfg.vel_pid.kp = vel_cfg.kp; cfg.vel_pid.ki = vel_cfg.ki; cfg.vel_pid.kd = vel_cfg.kd; cfg.vel_pid.i_limit = vel_cfg.i_limit; cfg.vel_pid.output_limit = vel_cfg.output_limit; cfg.vel_pid.dt = vel_cfg.dt;
-
-    // If JSON provided, prefer parsing it (use embedded cjson_min)
-    if (req->json.data && req->json.data[0] != '\0') {
-        const char *json = req->json.data;
-        cJSON *root = cJSON_Parse(json);
-        if (!root) {
-            rosidl_runtime_c__String__assign(&res->message, "json parse error");
-            res->success = false;
-            return;
-        }
-        cJSON *chassis = cJSON_GetObjectItemCaseSensitive(root, "chassis");
-        cJSON *ctx = chassis ? chassis : root;
-        bool updated = false;
-
-        cJSON *profile = cJSON_GetObjectItemCaseSensitive(ctx, "profile");
-        if (profile) {
-            cJSON *j = cJSON_GetObjectItemCaseSensitive(profile, "default_max_v");
-            if (j && cJSON_IsNumber(j)) { cfg.profile.default_max_v = (float)cJSON_GetNumberValue(j); updated = true; }
-            j = cJSON_GetObjectItemCaseSensitive(profile, "default_max_a");
-            if (j && cJSON_IsNumber(j)) { cfg.profile.default_max_a = (float)cJSON_GetNumberValue(j); updated = true; }
-        }
-
-        cJSON *pid = cJSON_GetObjectItemCaseSensitive(ctx, "pid");
-        if (pid) {
-            cJSON *pos = cJSON_GetObjectItemCaseSensitive(pid, "pos");
-            if (pos) {
-                cJSON *j = cJSON_GetObjectItemCaseSensitive(pos, "kp"); if (j && cJSON_IsNumber(j)) { cfg.pos_pid.kp = (float)cJSON_GetNumberValue(j); updated = true; }
-                j = cJSON_GetObjectItemCaseSensitive(pos, "ki"); if (j && cJSON_IsNumber(j)) { cfg.pos_pid.ki = (float)cJSON_GetNumberValue(j); updated = true; }
-                j = cJSON_GetObjectItemCaseSensitive(pos, "kd"); if (j && cJSON_IsNumber(j)) { cfg.pos_pid.kd = (float)cJSON_GetNumberValue(j); updated = true; }
-                j = cJSON_GetObjectItemCaseSensitive(pos, "i_limit"); if (j && cJSON_IsNumber(j)) { cfg.pos_pid.i_limit = (float)cJSON_GetNumberValue(j); updated = true; }
-                j = cJSON_GetObjectItemCaseSensitive(pos, "output_limit"); if (j && cJSON_IsNumber(j)) { cfg.pos_pid.output_limit = (float)cJSON_GetNumberValue(j); updated = true; }
-                j = cJSON_GetObjectItemCaseSensitive(pos, "dt"); if (j && cJSON_IsNumber(j)) { cfg.pos_pid.dt = (float)cJSON_GetNumberValue(j); updated = true; }
-            }
-            cJSON *vel = cJSON_GetObjectItemCaseSensitive(pid, "vel");
-            if (vel) {
-                cJSON *j = cJSON_GetObjectItemCaseSensitive(vel, "kp"); if (j && cJSON_IsNumber(j)) { cfg.vel_pid.kp = (float)cJSON_GetNumberValue(j); updated = true; }
-                j = cJSON_GetObjectItemCaseSensitive(vel, "ki"); if (j && cJSON_IsNumber(j)) { cfg.vel_pid.ki = (float)cJSON_GetNumberValue(j); updated = true; }
-                j = cJSON_GetObjectItemCaseSensitive(vel, "kd"); if (j && cJSON_IsNumber(j)) { cfg.vel_pid.kd = (float)cJSON_GetNumberValue(j); updated = true; }
-                j = cJSON_GetObjectItemCaseSensitive(vel, "i_limit"); if (j && cJSON_IsNumber(j)) { cfg.vel_pid.i_limit = (float)cJSON_GetNumberValue(j); updated = true; }
-                j = cJSON_GetObjectItemCaseSensitive(vel, "output_limit"); if (j && cJSON_IsNumber(j)) { cfg.vel_pid.output_limit = (float)cJSON_GetNumberValue(j); updated = true; }
-                j = cJSON_GetObjectItemCaseSensitive(vel, "dt"); if (j && cJSON_IsNumber(j)) { cfg.vel_pid.dt = (float)cJSON_GetNumberValue(j); updated = true; }
-            }
-        }
-
-        if (updated) {
-            taskENTER_CRITICAL();
-            auv::control::chassis.applyConfig(cfg);
-            taskEXIT_CRITICAL();
-            planner_replan_flag = true;
-            res->success = true;
-            rosidl_runtime_c__String__assign(&res->message, "ok");
-            cJSON_Delete(root);
-            return;
-        }
-        cJSON_Delete(root);
+    const char* json_ptr = (req->json.size > 0) ? req->json.data : nullptr;
+    const char* paths[16] = {nullptr};
+    const char* values[16] = {nullptr};
+    size_t count = (req->paths.size < 16) ? req->paths.size : 16;
+    for (size_t i = 0; i < count; ++i) {
+        paths[i] = req->paths.data[i].data;
+        values[i] = req->values.data[i].data;
     }
 
-    // Otherwise, try paths/values sequence update (simple mapping)
-    if (req->paths.data && req->values.data && req->paths.size > 0 && req->values.size == req->paths.size) {
-        for (size_t i = 0; i < req->paths.size; ++i) {
-            const char *path = req->paths.data[i].data;
-            const char *value = req->values.data[i].data;
-            if (!path || !value) continue;
-            // example supported paths (exact match)
-            if (strcmp(path, "chassis.profile.default_max_v") == 0) {
-                float fv = strtof(value, nullptr);
-                cfg.profile.default_max_v = fv;
-            } else if (strcmp(path, "chassis.profile.default_max_a") == 0) {
-                float fa = strtof(value, nullptr);
-                cfg.profile.default_max_a = fa;
-            } else if (strcmp(path, "chassis.pid.pos.kp") == 0) cfg.pos_pid.kp = strtof(value, nullptr);
-            else if (strcmp(path, "chassis.pid.pos.ki") == 0) cfg.pos_pid.ki = strtof(value, nullptr);
-            else if (strcmp(path, "chassis.pid.pos.kd") == 0) cfg.pos_pid.kd = strtof(value, nullptr);
-            else if (strcmp(path, "chassis.pid.vel.kp") == 0) cfg.vel_pid.kp = strtof(value, nullptr);
-            else if (strcmp(path, "chassis.pid.vel.ki") == 0) cfg.vel_pid.ki = strtof(value, nullptr);
-            else if (strcmp(path, "chassis.pid.vel.kd") == 0) cfg.vel_pid.kd = strtof(value, nullptr);
-        }
-        taskENTER_CRITICAL();
-        auv::control::chassis.applyConfig(cfg);
-        taskEXIT_CRITICAL();
-        planner_replan_flag = true;
-        res->success = true;
-        rosidl_runtime_c__String__assign(&res->message, "ok");
-        return;
-    }
-
-    // Provide richer diagnostic info when no-op: return json size/cap/pointer and first bytes
-    {
-        size_t json_strlen = 0;
-        size_t json_size = 0;
-        size_t json_cap = 0;
-        uintptr_t json_ptr = 0;
-        char head[129] = "";
-        if (req->json.data) {
-            json_ptr = (uintptr_t)req->json.data;
-            json_size = req->json.size;
-            json_cap = req->json.capacity;
-            // try to copy up to 128 bytes (not assuming NUL termination)
-            size_t cp = (json_size < (sizeof(head)-1)) ? json_size : (sizeof(head)-1);
-            if (cp > 0) {
-                memcpy(head, req->json.data, cp);
-                head[cp] = '\0';
-            }
-            // compute strlen of copied head (it's NUL-terminated at head[cp])
-            if (cp > 0) json_strlen = strlen(head);
-        }
-        size_t paths_cnt = req->paths.size;
-        size_t vals_cnt = req->values.size;
-        char diag[256];
-        int n = snprintf(diag, sizeof(diag), "json_len=%lu json_size=%lu cap=%lu ptr=0x%08lx paths=%lu values=%lu head=%s",
-            (unsigned long)json_strlen, (unsigned long)json_size, (unsigned long)json_cap, (unsigned long)json_ptr, (unsigned long)paths_cnt, (unsigned long)vals_cnt, head);
-        // avoid blocking UART in callback; copy diagnostic into response message
-        if (n > 0) rosidl_runtime_c__String__assign(&res->message, diag);
-        else rosidl_runtime_c__String__assign(&res->message, "no-op");
-        res->success = false;
-    }
+    char out_buf[64] = {0};
+    res->success = auv::service::ConfigService::updateParams(json_ptr, paths, values, count, out_buf, 64);
+    rosidl_runtime_c__String__assign(&res->message, out_buf);
 }
 
 void MicroRosTask::onGetParams(const void *reqin, rmw_request_id_t *req_id, void *resin) {
     (void)req_id;
     auto *res = static_cast<zit6_interfaces__srv__GetParams_Response *>(resin);
+    const auto *req = static_cast<const zit6_interfaces__srv__GetParams_Request *>(reqin);
     if (!res) return;
 
-    // current representative values (axis 0)
-    float v = 0.0f, a = 0.0f;
-    auv::control::chassis.getProfileLimits(0, v, a);
-    auto p_cfg = auv::control::chassis.getPIDConfig(0, true);
-    auto vel_cfg = auv::control::chassis.getPIDConfig(0, false);
-
-    const auto *req = static_cast<const zit6_interfaces__srv__GetParams_Request *>(reqin);
-    char buf[512];
-    size_t pos = 0;
-
-    // If no paths requested, return full minimal JSON (backwards compatible)
-    if (!req || req->paths.size == 0 || req->paths.data == NULL) {
-        pos = append_str(buf, sizeof(buf), pos, "{\"chassis\":{\"profile\":{\"default_max_v\":");
-        pos = append_float_fixed(buf, sizeof(buf), pos, v, 6);
-        pos = append_str(buf, sizeof(buf), pos, ",\"default_max_a\":");
-        pos = append_float_fixed(buf, sizeof(buf), pos, a, 6);
-        pos = append_str(buf, sizeof(buf), pos, "},\"pid\":{\"pos\":{\"kp\":");
-        pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.kp, 6);
-        pos = append_str(buf, sizeof(buf), pos, ",\"ki\":");
-        pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.ki, 6);
-        pos = append_str(buf, sizeof(buf), pos, ",\"kd\":");
-        pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.kd, 6);
-        pos = append_str(buf, sizeof(buf), pos, ",\"i_limit\":");
-        pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.i_limit, 6);
-        pos = append_str(buf, sizeof(buf), pos, ",\"output_limit\":");
-        pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.output_limit, 6);
-        pos = append_str(buf, sizeof(buf), pos, ",\"dt\":");
-        pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.dt, 6);
-        pos = append_str(buf, sizeof(buf), pos, "},\"vel\":{\"kp\":");
-        pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.kp, 6);
-        pos = append_str(buf, sizeof(buf), pos, ",\"ki\":");
-        pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.ki, 6);
-        pos = append_str(buf, sizeof(buf), pos, ",\"kd\":");
-        pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.kd, 6);
-        pos = append_str(buf, sizeof(buf), pos, ",\"i_limit\":");
-        pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.i_limit, 6);
-        pos = append_str(buf, sizeof(buf), pos, ",\"output_limit\":");
-        pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.output_limit, 6);
-        pos = append_str(buf, sizeof(buf), pos, ",\"dt\":");
-        pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.dt, 6);
-        pos = append_str(buf, sizeof(buf), pos, "}}}");
-
-        if (pos > 0 && pos < sizeof(buf)) {
-            if (res->config_json.data && res->config_json.capacity >= pos + 1) {
-                memcpy(res->config_json.data, buf, pos);
-                res->config_json.data[pos] = '\0';
-                res->config_json.size = pos;
-            } else {
-                rosidl_runtime_c__String__assign(&res->config_json, buf);
-            }
-            res->success = true;
-        } else {
-            if (res->config_json.data && res->config_json.capacity >= 3) {
-                memcpy(res->config_json.data, "{}", 2);
-                res->config_json.data[2] = '\0';
-                res->config_json.size = 2;
-            } else {
-                rosidl_runtime_c__String__assign(&res->config_json, "{}");
-            }
-            res->success = false;
-        }
-        return;
+    const char* paths[16] = {nullptr};
+    size_t count = (req && req->paths.data) ? ((req->paths.size < 16) ? req->paths.size : 16) : 0;
+    for (size_t i = 0; i < count; ++i) {
+        paths[i] = req->paths.data[i].data;
     }
 
-    // Parse requested paths and build minimal JSON containing only requested fields
-    bool any = false;
-    bool want_profile_v = false, want_profile_a = false;
-    bool want_pos_kp = false, want_pos_ki = false, want_pos_kd = false, want_pos_i_limit = false, want_pos_output = false, want_pos_dt = false;
-    bool want_vel_kp = false, want_vel_ki = false, want_vel_kd = false, want_vel_i_limit = false, want_vel_output = false, want_vel_dt = false;
-
-    for (size_t i = 0; i < req->paths.size; ++i) {
-        if (!req->paths.data) break;
-        const rosidl_runtime_c__String *s = &req->paths.data[i];
-        const char *path = (s && s->data) ? s->data : NULL;
-        if (!path) continue;
-        if (strcmp(path, "chassis.profile.default_max_v") == 0) { want_profile_v = true; any = true; }
-        else if (strcmp(path, "chassis.profile.default_max_a") == 0) { want_profile_a = true; any = true; }
-        else if (strcmp(path, "chassis.pid.pos.kp") == 0) { want_pos_kp = true; any = true; }
-        else if (strcmp(path, "chassis.pid.pos.ki") == 0) { want_pos_ki = true; any = true; }
-        else if (strcmp(path, "chassis.pid.pos.kd") == 0) { want_pos_kd = true; any = true; }
-        else if (strcmp(path, "chassis.pid.pos.i_limit") == 0) { want_pos_i_limit = true; any = true; }
-        else if (strcmp(path, "chassis.pid.pos.output_limit") == 0) { want_pos_output = true; any = true; }
-        else if (strcmp(path, "chassis.pid.pos.dt") == 0) { want_pos_dt = true; any = true; }
-        else if (strcmp(path, "chassis.pid.vel.kp") == 0) { want_vel_kp = true; any = true; }
-        else if (strcmp(path, "chassis.pid.vel.ki") == 0) { want_vel_ki = true; any = true; }
-        else if (strcmp(path, "chassis.pid.vel.kd") == 0) { want_vel_kd = true; any = true; }
-        else if (strcmp(path, "chassis.pid.vel.i_limit") == 0) { want_vel_i_limit = true; any = true; }
-        else if (strcmp(path, "chassis.pid.vel.output_limit") == 0) { want_vel_output = true; any = true; }
-        else if (strcmp(path, "chassis.pid.vel.dt") == 0) { want_vel_dt = true; any = true; }
-    }
-
-    if (!any) {
-        // no recognized paths requested
-        if (res->config_json.data && res->config_json.capacity >= 3) {
-            memcpy(res->config_json.data, "{}", 2);
-            res->config_json.data[2] = '\0';
-            res->config_json.size = 2;
-        } else {
-            rosidl_runtime_c__String__assign(&res->config_json, "{}");
-        }
-        res->success = false;
-        return;
-    }
-
-    // Build minimal JSON
-    pos = append_str(buf, sizeof(buf), pos, "{");
-    pos = append_str(buf, sizeof(buf), pos, "\"chassis\":{");
-    bool first_chassis = true;
-
-    // profile
-    if (want_profile_v || want_profile_a) {
-        pos = append_str(buf, sizeof(buf), pos, "\"profile\":{");
-        bool first = true;
-        if (want_profile_v) {
-            pos = append_str(buf, sizeof(buf), pos, "\"default_max_v\":");
-            pos = append_float_fixed(buf, sizeof(buf), pos, v, 6);
-            first = false;
-        }
-        if (want_profile_a) {
-            if (!first) pos = append_str(buf, sizeof(buf), pos, ",");
-            pos = append_str(buf, sizeof(buf), pos, "\"default_max_a\":");
-            pos = append_float_fixed(buf, sizeof(buf), pos, a, 6);
-        }
-        pos = append_str(buf, sizeof(buf), pos, "}");
-        first_chassis = false;
-    }
-
-    // pid
-    bool any_pos = want_pos_kp || want_pos_ki || want_pos_kd || want_pos_i_limit || want_pos_output || want_pos_dt;
-    bool any_vel = want_vel_kp || want_vel_ki || want_vel_kd || want_vel_i_limit || want_vel_output || want_vel_dt;
-    if (any_pos || any_vel) {
-        if (!first_chassis) pos = append_str(buf, sizeof(buf), pos, ",");
-        pos = append_str(buf, sizeof(buf), pos, "\"pid\":{");
-        bool first_pid = true;
-        if (any_pos) {
-            pos = append_str(buf, sizeof(buf), pos, "\"pos\":{");
-            bool first_pos = true;
-            if (want_pos_kp) { pos = append_str(buf, sizeof(buf), pos, "\"kp\":"); pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.kp, 6); first_pos = false; }
-            if (want_pos_ki) { if (!first_pos) pos = append_str(buf, sizeof(buf), pos, ","); pos = append_str(buf, sizeof(buf), pos, "\"ki\":"); pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.ki, 6); first_pos = false; }
-            if (want_pos_kd) { if (!first_pos) pos = append_str(buf, sizeof(buf), pos, ","); pos = append_str(buf, sizeof(buf), pos, "\"kd\":"); pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.kd, 6); first_pos = false; }
-            if (want_pos_i_limit) { if (!first_pos) pos = append_str(buf, sizeof(buf), pos, ","); pos = append_str(buf, sizeof(buf), pos, "\"i_limit\":"); pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.i_limit, 6); first_pos = false; }
-            if (want_pos_output) { if (!first_pos) pos = append_str(buf, sizeof(buf), pos, ","); pos = append_str(buf, sizeof(buf), pos, "\"output_limit\":"); pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.output_limit, 6); first_pos = false; }
-            if (want_pos_dt) { if (!first_pos) pos = append_str(buf, sizeof(buf), pos, ","); pos = append_str(buf, sizeof(buf), pos, "\"dt\":"); pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.dt, 6); first_pos = false; }
-            pos = append_str(buf, sizeof(buf), pos, "}");
-            first_pid = false;
-        }
-        if (any_vel) {
-            if (!first_pid) pos = append_str(buf, sizeof(buf), pos, ",");
-            pos = append_str(buf, sizeof(buf), pos, "\"vel\":{");
-            bool first_vel = true;
-            if (want_vel_kp) { pos = append_str(buf, sizeof(buf), pos, "\"kp\":"); pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.kp, 6); first_vel = false; }
-            if (want_vel_ki) { if (!first_vel) pos = append_str(buf, sizeof(buf), pos, ","); pos = append_str(buf, sizeof(buf), pos, "\"ki\":"); pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.ki, 6); first_vel = false; }
-            if (want_vel_kd) { if (!first_vel) pos = append_str(buf, sizeof(buf), pos, ","); pos = append_str(buf, sizeof(buf), pos, "\"kd\":"); pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.kd, 6); first_vel = false; }
-            if (want_vel_i_limit) { if (!first_vel) pos = append_str(buf, sizeof(buf), pos, ","); pos = append_str(buf, sizeof(buf), pos, "\"i_limit\":"); pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.i_limit, 6); first_vel = false; }
-            if (want_vel_output) { if (!first_vel) pos = append_str(buf, sizeof(buf), pos, ","); pos = append_str(buf, sizeof(buf), pos, "\"output_limit\":"); pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.output_limit, 6); first_vel = false; }
-            if (want_vel_dt) { if (!first_vel) pos = append_str(buf, sizeof(buf), pos, ","); pos = append_str(buf, sizeof(buf), pos, "\"dt\":"); pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.dt, 6); first_vel = false; }
-            pos = append_str(buf, sizeof(buf), pos, "}");
-        }
-        pos = append_str(buf, sizeof(buf), pos, "}");
-    }
-
-    // close chassis and root
-    pos = append_str(buf, sizeof(buf), pos, "}");
-    pos = append_str(buf, sizeof(buf), pos, "}");
-
-    if (pos > 0 && pos < sizeof(buf)) {
-        if (res->config_json.data && res->config_json.capacity >= pos + 1) {
-            memcpy(res->config_json.data, buf, pos);
-            res->config_json.data[pos] = '\0';
-            res->config_json.size = pos;
-        } else {
-            rosidl_runtime_c__String__assign(&res->config_json, buf);
-        }
-        res->success = true;
-    } else {
-        if (res->config_json.data && res->config_json.capacity >= 3) {
-            memcpy(res->config_json.data, "{}", 2);
-            res->config_json.data[2] = '\0';
-            res->config_json.size = 2;
-        } else {
-            rosidl_runtime_c__String__assign(&res->config_json, "{}");
-        }
-        res->success = false;
-    }
+    const char* json_res = auv::service::ConfigService::getParamsJson(paths, count);
+    res->success = true;
+    rosidl_runtime_c__String__assign(&res->config_json, json_res);
+    rosidl_runtime_c__String__assign(&res->message, "ok");
 }
 
 void MicroRosTask::cleanupMicroRos() {
@@ -576,7 +192,7 @@ void MicroRosTask::cleanupMicroRos() {
                 get_req_.paths.data[_i].size = 0;
             }
         }
-        rosidl_runtime_c__String__Sequence_fini(&get_req_.paths);
+        rosidl_runtime_c__String__Sequence__fini(&get_req_.paths);
     }
     if (update_req_.json.data) {
         microros_deallocate(update_req_.json.data, NULL);
@@ -597,7 +213,7 @@ void MicroRosTask::cleanupMicroRos() {
     rcl_subscription_fini(&setpoint_sub_, &node_);
     rcl_subscription_fini(&arm_sub_, &node_);
     rcl_subscription_fini(&ins_cmd_sub_, &node_);
-    rcl_subscription_fini(&pid_sub_, &node_);
+    // rcl_subscription_fini(&pid_sub_, &node_); // 废弃
     rcl_subscription_fini(&servo_sub_, &node_);
     rcl_subscription_fini(&led_sub_, &node_);
     rcl_node_fini(&node_);
@@ -655,13 +271,11 @@ void MicroRosTask::run() {
                     rclc_subscription_init_default(&setpoint_sub_, &node_, ROSIDL_GET_MSG_TYPE_SUPPORT(zit6_interfaces, msg, ZitSetpoint), "/zit6/cmd/setpoint");
                     rclc_subscription_init_default(&arm_sub_, &node_, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt32), "/zit6/cmd/agxhbt");
                     rclc_subscription_init_default(&ins_cmd_sub_, &node_, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt8), "/zit6/cmd/ins");
-                    rclc_subscription_init_default(&pid_sub_, &node_, ROSIDL_GET_MSG_TYPE_SUPPORT(zit6_interfaces, msg, ZitPid), "/zit6/cmd/pid");
 
-                    rclc_executor_init(&executor_, &support_.context, 20, &rcl_allocator);
+                    rclc_executor_init(&executor_, &support_.context, 18, &rcl_allocator);
                     rclc_executor_add_subscription(&executor_, &setpoint_sub_, &setpoint_msg_, &MicroRosTask::setpointCb, ON_NEW_DATA);
                     rclc_executor_add_subscription(&executor_, &arm_sub_, &arm_msg_, &MicroRosTask::armCb, ON_NEW_DATA);
                     rclc_executor_add_subscription(&executor_, &ins_cmd_sub_, &ins_cmd_msg_, &MicroRosTask::insCmdCb, ON_NEW_DATA);
-                    rclc_executor_add_subscription(&executor_, &pid_sub_, &pid_msg_, &MicroRosTask::zitPidCb, ON_NEW_DATA);
                     rclc_executor_add_subscription(&executor_, &servo_sub_, &servo_msg_, &MicroRosTask::servoCb, ON_NEW_DATA);
                     rclc_executor_add_subscription(&executor_, &led_sub_, &led_msg_, &MicroRosTask::ledCb, ON_NEW_DATA);
                     // Initialize services for parameter update and query
@@ -674,6 +288,16 @@ void MicroRosTask::run() {
                         update_req_.json.data = (char*)microros_allocate(1024, NULL);
                         update_req_.json.capacity = 1024;
                         update_req_.json.size = 0;
+
+                        // 重要修复：预分配 paths 和 values 序列内存
+                        rosidl_runtime_c__String__Sequence__init(&update_req_.paths, 16);
+                        rosidl_runtime_c__String__Sequence__init(&update_req_.values, 16);
+                        for (size_t _i = 0; _i < 16; ++_i) {
+                            update_req_.paths.data[_i].data = (char*)microros_allocate(64, NULL);
+                            update_req_.paths.data[_i].capacity = 64;
+                            update_req_.values.data[_i].data = (char*)microros_allocate(64, NULL);
+                            update_req_.values.data[_i].capacity = 64;
+                        }
 
                         zit6_interfaces__srv__UpdateParams_Response__init(&update_res_);
                         rc = rclc_executor_add_service_with_request_id(&executor_, &update_params_srv_, &update_req_, &update_res_, &MicroRosTask::updateParamsCb);

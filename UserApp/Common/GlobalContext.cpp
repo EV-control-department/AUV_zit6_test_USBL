@@ -17,7 +17,9 @@ namespace device {
 namespace control {
     ChassisManager chassis;
 }
-}
+
+// sys_config is defined in SystemConfig.cpp
+} // namespace auv
 
 // --- 共享变量定义 ---
 float target_p[4] = {0.0f, 0.0f, 0.0f, 0.0f};

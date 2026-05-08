@@ -1,7 +1,3 @@
-这份架构设计文档的基础非常扎实。为了将我们之前深入探讨的**“内置运动学平滑器”、“前馈控制”、“无扰切换（特别是Z轴积分继承）”**以及**“微积分变频拆分协议”**完美融合进去，我们需要对 **第 3、4、5、6 节** 进行重构。
-
-我将纯 C++ 类设计的职责划分得更加明确，将控制算法与 ROS 2 通信解耦。以下是为你注入了全部高级逻辑的完整 Markdown 文档，你可以直接覆盖原文件：
-
 ***
 
 # AUV 固件 C++ 架构设计方案 (Optimized & Feedforward Ready)
@@ -47,8 +43,9 @@
 - `CoordinateManager`
     - 提供 `worldToBody` / `bodyToWorld` 的二维旋转转换函数，代码实现与设计意图一致。注意：函数使用 yaw 进行平面旋转，符号约定已在实现中固定，使用时请保持一致。
 
-- `KinematicsSolver` / VIT6 下发
-    - 原设计提到的 `KinematicsSolver` 与 `VIT6_Link` 在代码中未作为独立模块完整实现（仓库中存在 `setActuatorForces`、`VIT6` 相关抽象在未来可扩展）。目前 `ChassisManager::update` 输出的是 4-DOF 归一化力矢量，由上层（或未来的 `VIT6_Link`）负责映射为具体推进器命令与通信下发。
+- `KinematicsSolver` / 推进器分配 (Mixer)
+    - **职责明确**：本工程 `ChassisManager` 目前输出的是 4-DOF 归一化力矢量（Fx, Fy, Fz, Myaw）。
+    - **分配逻辑**：具体的 8 电机混控分配（B 矩阵）不在本固件层实现，而是由下位机（VIT6 固件）接收 4-DOF 指令后自行解算并驱动电机。本固件通过串口协议透传这四个轴向的归一化出力目标。
 
 差异小结：
 - 设计稿把路由与级联控制拆分为独立类，代码中以 `ChassisManager` 合并实现；若要恢复模块化，可按职责拆分 `SetpointRouter`（负责 message → target 更新与层级切换）与 `CascadeController`（只做数值控制），二者通过清晰接口交互。
@@ -67,7 +64,6 @@
         - 速度 `/zit6/state/vel`：约 16ms（≈62.5Hz）
         - 推力 `/zit6/state/thr`：约 33ms（≈30Hz）
         - 状态 `/zit6/state/status`：100ms（10Hz）
-        - 解锁镜像 `/zit6/state/isarm`：100ms（10Hz）
         - 节点心跳 `/zit6/state/zithbt`：1000ms（1Hz）
     - 订阅话题：`/zit6/cmd/setpoint`、`/zit6/cmd/agxhbt`（arm heartbeat）与 `/zit6/cmd/ins`。
 
@@ -141,8 +137,10 @@
      - 位置环或速度环 PID
      - 前馈叠加
      - 输出限幅
-5. 输出结果由状态发布器上报到 `/zit6/state/thr`、`/zit6/state/status`、`/zit6/state/isarm` 和 `/zit6/state/zithbt`。
-6. **参数更新流**：`onZitPid()` 订阅并解析 `/zit6/cmd/pid`，调用 `ChassisManager::configurePID()` 实时重载算法增益，无需停机或重新烧录。
+5. 输出结果由状态发布器上报到 `/zit6/state/thr`、`/zit6/state/status` 和 `/zit6/state/zithbt`。
+6. **参数更新与查询流**：
+     - **更新**：`onUpdateParams()` 处理 `/zit6/update_params` 服务请求，解析 JSON 配置并调用 `ChassisManager::configurePID()` 等接口实时重载参数。
+     - **查询**：`onGetParams()` 处理 `/zit6/get_params` 服务请求，支持通过路径列表按需查询当前生效的参数，并返回最小化的 JSON 响应。
 
 这条链路的关键是：`ChassisManager` 现在不是单纯“算数”，它同时承担了状态机、路由器和级联控制器三件事。
 

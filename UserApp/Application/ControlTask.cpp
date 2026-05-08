@@ -3,7 +3,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "SoftWatchdog.hpp"
-#include "SensorsConfig.hpp"
+#include "SystemConfig.hpp"
 #include <string.h>
 #include "SerialPort.hpp"
 #include <cstdio>
@@ -72,7 +72,7 @@ void ControlTask::init() {
     taskEXIT_CRITICAL();
 
     ins_driver.init();
-    SoftWatchdog::getInstance().init();
+    SoftWatchdog::getInstance().init(auv::config::sys_config.soft_watchdog);
 
     // 简单测试：非阻塞地通过 UART5 发送一条调试信息（忙时丢弃）
     const char test_msg[] = "DEBUG: UART5 OK\r\n";
@@ -93,7 +93,7 @@ auv::common::NavState ControlTask::updateNavigation() {
     ins_driver.update(nav);
 
     // 根据配置选择是否使用独立的 MS5837 深度覆盖融合深度
-    if (auv::config::DEFAULT_SENSORS_CONFIG.z_data_source == auv::config::ZDataSource::USE_MS5837_Z) {
+    if (auv::config::sys_config.sensors.z_data_source == auv::config::ZDataSource::USE_MS5837_Z) {
         float depth_snapshot = 0.0f;
         taskENTER_CRITICAL();
         depth_snapshot = current_depth_z;

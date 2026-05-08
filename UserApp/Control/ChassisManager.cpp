@@ -1,13 +1,13 @@
 #include "ChassisManager.hpp"
 #include "main.h"
 #include <algorithm>
-#include "ChassisConfig.hpp"
+#include "SystemConfig.hpp"
 
 namespace auv {
 namespace control {
 
 ChassisManager::ChassisManager() {
-  applyConfig(auv::config::DEFAULT_CHASSIS_CONFIG);
+  applyConfig(auv::config::ChassisConfig());
 }
 
 ChassisManager::ChassisManager(const auv::config::ChassisConfig& cfg) {

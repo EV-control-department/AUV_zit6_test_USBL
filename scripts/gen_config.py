@@ -2,195 +2,182 @@ import json
 import os
 import sys
 
-def gen_header(json_path, out_path):
+def get_cpp_type(val):
+    if isinstance(val, bool):
+        return "ParamType::BOOL", "bool"
+    if isinstance(val, int):
+        return "ParamType::UINT32", "uint32_t"
+    if isinstance(val, float):
+        return "ParamType::FLOAT", "float"
+    if isinstance(val, str):
+        # 特殊处理枚举
+        if "use_ms5837_z" in val or "use_ins" in val:
+             return "ParamType::ENUM_Z", "ZDataSource"
+        return "ParamType::STRING", "const char*"
+    return None, None
+
+def collect_params(data, prefix=""):
+    params = []
+    for k, v in data.items():
+        path = f"{prefix}.{k}" if prefix else k
+        if isinstance(v, dict):
+            params.extend(collect_params(v, path))
+        else:
+            p_type, cpp_type = get_cpp_type(v)
+            if p_type:
+                params.append({
+                    "path": path,
+                    "key": k,
+                    "type": p_type,
+                    "cpp_type": cpp_type,
+                    "val": v
+                })
+    return params
+
+def gen_system_config(json_path, out_dir):
     with open(json_path, 'r') as f:
         config = json.load(f)
 
-    # Accept either a file path or an output directory. If a directory is
-    # provided, generated headers will be placed into that directory.
-    if os.path.isdir(out_path):
-        out_dir = out_path
-        soft_watchdog_hpp = os.path.join(out_dir, 'SoftWatchdogConfig.hpp')
-    else:
-        # treat as a file path if it ends with .hpp, otherwise as dir
-        if out_path.endswith('.hpp'):
-            out_dir = os.path.dirname(out_path)
-            soft_watchdog_hpp = out_path
-        else:
-            out_dir = out_path
-            soft_watchdog_hpp = os.path.join(out_dir, 'SoftWatchdogConfig.hpp')
-
     os.makedirs(out_dir, exist_ok=True)
+    header_path = os.path.join(out_dir, 'SystemConfig.hpp')
 
-    sw_config = config.get('soft_watchdog', {})
-    timeout = sw_config.get('timeout_ms', 3000)
-    check_microros = str(sw_config.get('check_microros', True)).lower()
-    check_ins = str(sw_config.get('check_ins', True)).lower()
-    check_depth = str(sw_config.get('check_depth', True)).lower()
-
-    content = f"""#ifndef __SOFT_WATCHDOG_CONFIG_HPP
-#define __SOFT_WATCHDOG_CONFIG_HPP
-
-#include <stdint.h>
-
-namespace auv {{
-namespace config {{
-
-/**
- * @struct SoftWatchdogConfig
- * @brief 软件看门狗配置结构体 (Auto-generated from config.json)
- */
-struct SoftWatchdogConfig {{
-    uint32_t timeout_ms;
-    bool check_microros;
-    bool check_ins;
-    bool check_depth;
-}};
-
-static const SoftWatchdogConfig DEFAULT_WATCHDOG_CONFIG = {{
-    .timeout_ms = {timeout},
-    .check_microros = {check_microros},
-    .check_ins = {check_ins},
-    .check_depth = {check_depth}
-}};
-
-}} // namespace config
-}} // namespace auv
-
-#endif
-"""
+    # 生成结构体定义 (这里简化处理，手动定义核心结构以保证兼容性，元数据自动生成)
+    # 实际上可以完全自动生成，但为了保持现有代码不崩溃，我们先定义好顶层结构
     
-    # Write SoftWatchdog header only if changed to avoid unnecessary recompilation
-    old = None
-    if os.path.exists(soft_watchdog_hpp):
-        with open(soft_watchdog_hpp, 'r') as f:
-            old = f.read()
-
-    if old != content:
-        with open(soft_watchdog_hpp, 'w') as f:
-            f.write(content)
-
-    # Also generate chassis config header in the same directory
-    chassis_hpp = os.path.join(out_dir, 'ChassisConfig.hpp')
-
-    chassis_cfg = config.get('chassis', {})
-    profile = chassis_cfg.get('profile', {})
-    def_max_v = profile.get('default_max_v', 0.5)
-    def_max_a = profile.get('default_max_a', 0.2)
-
-    pid = chassis_cfg.get('pid', {})
-    pos = pid.get('pos', {})
-    vel = pid.get('vel', {})
-
-    pos_kp = pos.get('kp', 1.0)
-    pos_ki = pos.get('ki', 0.0)
-    pos_kd = pos.get('kd', 0.0)
-    pos_i_limit = pos.get('i_limit', 1.0)
-    pos_output_limit = pos.get('output_limit', 1.0)
-    pos_dt = pos.get('dt', 0.01)
-
-    vel_kp = vel.get('kp', 2.0)
-    vel_ki = vel.get('ki', 0.5)
-    vel_kd = vel.get('kd', 0.1)
-    vel_i_limit = vel.get('i_limit', 1.0)
-    vel_output_limit = vel.get('output_limit', 1.0)
-    vel_dt = vel.get('dt', 0.01)
-
-    chassis_content = f"""#ifndef __CHASSIS_CONFIG_HPP
-#define __CHASSIS_CONFIG_HPP
+    content = """#ifndef __SYSTEM_CONFIG_HPP
+#define __SYSTEM_CONFIG_HPP
 
 #include <stdint.h>
+#include <stddef.h>
 
-namespace auv {{
-namespace config {{
+namespace auv {
+namespace config {
 
-/**
- * @struct ChassisConfig
- * @brief 底盘默认参数配置 (Auto-generated from config.json)
- */
-struct ChassisProfile {{
-    float default_max_v;
-    float default_max_a;
-}};
+enum class ParamType {
+    FLOAT,
+    UINT32,
+    INT32,
+    BOOL,
+    STRING,
+    ENUM_Z
+};
 
-struct PIDConfig {{
+struct ParamMeta {
+    const char* path;
+    void* ptr;
+    ParamType type;
+};
+
+// 传感器枚举定义
+enum class ZDataSource {
+    USE_INS_INTEGRATED_Z,
+    USE_MS5837_Z
+};
+
+// --- 自动生成的配置结构体 ---
+
+struct PIDConfig {
     float kp;
     float ki;
     float kd;
     float i_limit;
     float output_limit;
     float dt;
-}};
+};
 
-struct ChassisConfig {{
+struct ChassisProfile {
+    float default_max_v;
+    float default_max_a;
+};
+
+struct ChassisConfig {
     ChassisProfile profile;
     PIDConfig pos_pid;
     PIDConfig vel_pid;
-}};
+};
 
-static const ChassisConfig DEFAULT_CHASSIS_CONFIG = {{
-    .profile = {{ .default_max_v = {def_max_v}, .default_max_a = {def_max_a} }},
-    .pos_pid = {{ .kp = {pos_kp}, .ki = {pos_ki}, .kd = {pos_kd}, .i_limit = {pos_i_limit}, .output_limit = {pos_output_limit}, .dt = {pos_dt} }},
-    .vel_pid = {{ .kp = {vel_kp}, .ki = {vel_ki}, .kd = {vel_kd}, .i_limit = {vel_i_limit}, .output_limit = {vel_output_limit}, .dt = {vel_dt} }},
-}};
+struct SoftWatchdogConfig {
+    uint32_t timeout_ms;
+    bool check_microros;
+    bool check_ins;
+    bool check_depth;
+};
 
-}} // namespace config
-}} // namespace auv
+struct InsConfig {
+    float init_lat;
+    float init_lon;
+};
+
+struct SensorsConfig {
+    ZDataSource z_data_source;
+};
+
+struct SystemConfig {
+    ChassisConfig chassis;
+    InsConfig ins;
+    SoftWatchdogConfig soft_watchdog;
+    SensorsConfig sensors;
+};
+
+// 全局配置实例声明
+extern SystemConfig sys_config;
+
+// 参数注册表声明
+extern const ParamMeta SYSTEM_PARAMS[];
+extern const size_t SYSTEM_PARAMS_COUNT;
+
+} // namespace config
+} // namespace auv
 
 #endif
 """
 
-    # Only write if changed
-    write_chassis = True
-    if os.path.exists(chassis_hpp):
-        with open(chassis_hpp, 'r') as f:
-            if f.read() == chassis_content:
-                write_chassis = False
-
-    if write_chassis:
-        with open(chassis_hpp, 'w') as f:
-            f.write(chassis_content)
-
-    # Generate SensorsConfig.hpp
-    z_data_sourse = config.get('z_data_sourse', 'use_ins_intergrated_z').lower()
-    z_enum = 'USE_MS5837_Z' if z_data_sourse == 'use_ms5837_z' else 'USE_INS_INTEGRATED_Z'
-
-    sensors_hpp = os.path.join(out_dir, 'SensorsConfig.hpp')
-    sensors_content = f"""#ifndef __SENSORS_CONFIG_HPP
-#define __SENSORS_CONFIG_HPP
+    # 生成注册表源文件 (SystemConfig.cpp)
+    params = collect_params(config)
+    
+    cpp_content = f"""#include "SystemConfig.hpp"
 
 namespace auv {{
 namespace config {{
 
-enum class ZDataSource {{
-    USE_INS_INTEGRATED_Z,
-    USE_MS5837_Z
+SystemConfig sys_config = {{
+    .chassis = {{
+        .profile = {{ {config['chassis']['profile']['default_max_v']}, {config['chassis']['profile']['default_max_a']} }},
+        .pos_pid = {{ {config['chassis']['pid']['pos']['kp']}, {config['chassis']['pid']['pos']['ki']}, {config['chassis']['pid']['pos']['kd']}, {config['chassis']['pid']['pos']['i_limit']}, {config['chassis']['pid']['pos']['output_limit']}, {config['chassis']['pid']['pos']['dt']} }},
+        .vel_pid = {{ {config['chassis']['pid']['vel']['kp']}, {config['chassis']['pid']['vel']['ki']}, {config['chassis']['pid']['vel']['kd']}, {config['chassis']['pid']['vel']['i_limit']}, {config['chassis']['pid']['vel']['output_limit']}, {config['chassis']['pid']['vel']['dt']} }}
+    }},
+    .ins = {{ {config['ins']['init_lat']}, {config['ins']['init_lon']} }},
+    .soft_watchdog = {{ {config['soft_watchdog']['timeout_ms']}, {str(config['soft_watchdog']['check_microros']).lower()}, {str(config['soft_watchdog']['check_ins']).lower()}, {str(config['soft_watchdog']['check_depth']).lower()} }},
+    .sensors = {{ ZDataSource::{ "USE_MS5837_Z" if config['z_data_sourse'] == 'use_ms5837_z' else "USE_INS_INTEGRATED_Z" } }}
 }};
 
-struct SensorsConfig {{
-    ZDataSource z_data_source;
-}};
-
-static const SensorsConfig DEFAULT_SENSORS_CONFIG = {{
-    .z_data_source = ZDataSource::{z_enum}
-}};
-
-}} // namespace config
-}} // namespace auv
-
-#endif
+const ParamMeta SYSTEM_PARAMS[] = {{
 """
+    
+    for p in params:
+        cpp_path = p['path']
+        # 修正 JSON 路径到 C++ 成员路径的映射
+        if cpp_path == "z_data_sourse": cpp_path = "sensors.z_data_source"
+        elif "chassis.pid.pos." in cpp_path: cpp_path = cpp_path.replace("chassis.pid.pos.", "chassis.pos_pid.")
+        elif "chassis.pid.vel." in cpp_path: cpp_path = cpp_path.replace("chassis.pid.vel.", "chassis.vel_pid.")
+        elif "soft_watchdog." in cpp_path: cpp_path = cpp_path.replace("soft_watchdog.", "soft_watchdog.") # 无需变化但保持结构
 
-    if os.path.exists(sensors_hpp):
-        with open(sensors_hpp, 'r') as f:
-            if f.read() == sensors_content:
-                return
+        cpp_content += f'    {{"{p["path"]}", &sys_config.{cpp_path}, {p["type"]}}},\n'
+    
+    cpp_content += "    {NULL, NULL, ParamType::FLOAT}\n"
+    cpp_content += "};\n\n"
+    cpp_content += f"const size_t SYSTEM_PARAMS_COUNT = {len(params)};\n\n"
+    cpp_content += "} // namespace config\n"
+    cpp_content += "} // namespace auv\n"
 
-    with open(sensors_hpp, 'w') as f:
-        f.write(sensors_content)
+    # 写入文件
+    with open(header_path, 'w') as f:
+        f.write(content)
+    
+    with open(os.path.join(out_dir, 'SystemConfig.cpp'), 'w') as f:
+        f.write(cpp_content)
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("Usage: python gen_config.py <config.json> <output_dir_or.hpp>")
         sys.exit(1)
-    gen_header(sys.argv[1], sys.argv[2])
+    gen_system_config(sys.argv[1], sys.argv[2])

@@ -3,7 +3,7 @@
 #include "PID_Controller.hpp"
 #include "KinematicProfile.hpp"
 #include "CoordinateManager.hpp"
-#include "ChassisConfig.hpp"
+#include "SystemConfig.hpp"
 #include "CommonConfig.hpp"
 #include <array>
 
@@ -90,7 +90,7 @@ private:
     float last_z_thrust_ = 0.0f;               ///< 记录上周期的 Z 轴推力，用于 Trim Pre-loading
     std::array<float, 4> last_actual_v_ = {0}; ///< 上周期实际速度，用于计算加速度（用于 D 项）
     uint32_t last_update_tick_ = 0;            ///< 用于自动计算 dt
-    auv::config::ChassisConfig config_ = auv::config::DEFAULT_CHASSIS_CONFIG; ///< 当前应用的底盘参数
+    auv::config::ChassisConfig config_; ///< 当前应用的底盘参数
 };
 
 } // namespace control
