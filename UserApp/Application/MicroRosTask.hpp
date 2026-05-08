@@ -69,7 +69,7 @@ private:
 	void cleanupMicroRos();
 
 	// 静态回调封装（传入 rclc）
-	static void zitPidCb(const void *msgin) { if (instance_) instance_->onZitPid(msgin); }
+	// static void zitPidCb(const void *msgin) { if (instance_) instance_->onZitPid(msgin); }
 	static void setpointCb(const void *msgin) { if (instance_) instance_->onZitSetpoint(msgin); }
 	static void armCb(const void *msgin) { if (instance_) instance_->onArmHeartbeat(msgin); }
 	static void insCmdCb(const void *msgin) { if (instance_) instance_->onInsCommand(msgin); }

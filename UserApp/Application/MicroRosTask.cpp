@@ -64,43 +64,110 @@ void MicroRosTask::onZitSetpoint(const void *msgin) {
     if (!is_system_armed) return;
 
     uint32_t level = msg->control_key & 0x03;
+    // 如果 level >= 3 (即 0x03)，视为非法或保留，直接忽略（防止因为 control_key: 3 导致系统无响应）
+    if (level >= 3) return; 
+
     bool is_body = (msg->control_key & 0x10) != 0;
     bool is_inc = (msg->control_key & 0x20) != 0;
     uint32_t mask = msg->type_mask;
     float val[4] = {msg->x, msg->y, msg->z, msg->yaw};
 
     auto nav = auv::shared::snapshotNavState();
-    if ((level == 0 || level == 1) && !auv::shared::isNavigationValid(nav)) return;
+    // 修改：允许在仿真模式直接通过导航有效性检查
+    bool nav_valid = auv::shared::isNavigationValid(nav) || auv::config::sys_config.simulation.hitl_enabled;
+    if ((level == 0 || level == 1) && !nav_valid) return;
 
     if (level == 2) { // FORCE
-        float fx = val[0], fy = val[1];
-        if (!is_body) auv::control::CoordinateManager::worldToBody(nav.yaw, val[0], val[1], fx, fy);
+        float fx, fy;
+        if (is_body) {
+            // 机体系力，直接使用
+            fx = val[0];
+            fy = val[1];
+        } else {
+            // 世界系力，需要转到机体系再控制
+            auv::control::CoordinateManager::worldToBody(nav.yaw, val[0], val[1], fx, fy);
+        }
         float forces[4] = {fx, fy, val[2], val[3]};
         taskENTER_CRITICAL();
-        auv::control::chassis.setActuatorForces(forces);
+        // 确保切换到 ACTUATOR 模式前，先清理之前可能残留在 target_p 中的速度指令
+        // 防止后续切回速度环时发生突跳
+        for (int i = 0; i < 4; i++) target_p[i] = 0.0f;
+
+        // 修正：在 FORCE 模式下也需要根据 type_mask 决定是否更新对应的轴
+        static float last_forces[4] = {0};
+        for (int i = 0; i < 4; i++) {
+            if (!(mask & (1 << i))) last_forces[i] = (i < 2) ? (i == 0 ? fx : fy) : val[i];
+        }
+        auv::control::chassis.setActuatorForces(last_forces);
         float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw};
         float actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
         auv::control::chassis.setControlLevel(auv::common::ControlLevel::ACTUATOR, actual_p, actual_v);
         taskEXIT_CRITICAL();
     } else if (level == 1) { // VEL
         taskENTER_CRITICAL();
-        for (int i = 0; i < 4; i++) target_p[i] = val[i];
+        // 速度环处理逻辑
+        // 注意：速度环的 target_p 数组实际存储的是【目标速度(NED系)】
+        float target_world_v[4] = {0};
+        if (is_body) {
+            // 机体系速度转世界系速度
+            auv::control::CoordinateManager::bodyToWorld(nav.yaw, val[0], val[1], target_world_v[0], target_world_v[1]);
+            target_world_v[2] = val[2];
+            target_world_v[3] = val[3];
+        } else {
+            // 已经是世界系速度
+            for (int i = 0; i < 4; i++) target_world_v[i] = val[i];
+        }
+
+        // 应用掩码：0更新，1不更新
+        for (int i = 0; i < 4; i++) {
+            if (!(mask & (1 << i))) target_p[i] = target_world_v[i];
+        }
+
         float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw};
         float actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
         auv::control::chassis.setControlLevel(auv::common::ControlLevel::VELOCITY, actual_p, actual_v);
         taskEXIT_CRITICAL();
     } else if (level == 0) { // POS
         taskENTER_CRITICAL();
-        if (is_body && is_inc) {
-            float wx, wy;
-            auv::control::CoordinateManager::bodyToWorld(nav.yaw, val[0], val[1], wx, wy);
-            if (mask & 0x01) target_p[0] = nav.x + wx;
-            if (mask & 0x02) target_p[1] = nav.y + wy;
-            if (mask & 0x04) target_p[2] = nav.z + val[2];
-            if (mask & 0x08) target_p[3] = nav.yaw + val[3];
+        float final_target_world_p[4];
+        for (int i = 0; i < 4; i++) final_target_world_p[i] = target_p[i];
+
+        if (is_body) {
+            // 机体系模式
+            if (is_inc) {
+                // 增量模式：基于当前实际位置和航向叠加位移
+                float wx, wy;
+                auv::control::CoordinateManager::bodyToWorld(nav.yaw, val[0], val[1], wx, wy);
+                final_target_world_p[0] = nav.x + wx;
+                final_target_world_p[1] = nav.y + wy;
+                final_target_world_p[2] = nav.z + val[2];
+                final_target_world_p[3] = nav.yaw + val[3];
+            } else {
+                // 绝对模式：基于导航原点但按当前航向旋转映射
+                float wx, wy;
+                auv::control::CoordinateManager::bodyToWorld(nav.yaw, val[0], val[1], wx, wy);
+                final_target_world_p[0] = wx;
+                final_target_world_p[1] = wy;
+                final_target_world_p[2] = val[2];
+                final_target_world_p[3] = val[3];
+            }
         } else {
-            for (int i = 0; i < 4; i++) if (mask & (1 << i)) target_p[i] = val[i];
+            // 世界系模式
+            if (is_inc) {
+                // 世界系增量
+                float current_p[4] = {nav.x, nav.y, nav.z, nav.yaw};
+                for (int i = 0; i < 4; i++) final_target_world_p[i] = current_p[i] + val[i];
+            } else {
+                // 世界系绝对
+                for (int i = 0; i < 4; i++) final_target_world_p[i] = val[i];
+            }
         }
+
+        // 统一应用掩码更新 target_p
+        for (int i = 0; i < 4; i++) {
+            if (!(mask & (1 << i))) target_p[i] = final_target_world_p[i];
+        }
+
         float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw};
         float actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
         auv::control::chassis.setControlLevel(auv::common::ControlLevel::POSITION, actual_p, actual_v);
@@ -159,6 +226,12 @@ void MicroRosTask::onUpdateParams(const void *reqin, rmw_request_id_t *req_id, v
 
     char out_buf[64] = {0};
     res->success = auv::service::ConfigService::updateParams(json_ptr, paths, values, count, out_buf, 64);
+    
+    // 如果参数中有 PID 相关修改，同步到控制算法
+    if (res->success) {
+        auv::control::chassis.applyConfig(auv::config::sys_config.chassis);
+    }
+
     rosidl_runtime_c__String__assign(&res->message, out_buf);
 }
 

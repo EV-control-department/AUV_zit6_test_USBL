@@ -16,25 +16,28 @@ ChassisManager::ChassisManager(const auv::config::ChassisConfig& cfg) {
 
 void ChassisManager::applyConfig(const auv::config::ChassisConfig& cfg) {
   config_ = cfg;
+  const auv::config::AxisConfig* axes[4] = {&cfg.x, &cfg.y, &cfg.z, &cfg.yaw};
+  
   for (int i = 0; i < 4; i++) {
-    profiles_[i].setLimits(cfg.profile.default_max_v, cfg.profile.default_max_a);
+    const auto& axis_cfg = *axes[i];
+    profiles_[i].setLimits(axis_cfg.max_v, axis_cfg.max_a);
 
     PID_Controller::Config pos_cfg;
-    pos_cfg.kp = cfg.pos_pid.kp;
-    pos_cfg.ki = cfg.pos_pid.ki;
-    pos_cfg.kd = cfg.pos_pid.kd;
-    pos_cfg.i_limit = cfg.pos_pid.i_limit;
-    pos_cfg.output_limit = cfg.pos_pid.output_limit;
-    pos_cfg.dt = cfg.pos_pid.dt;
+    pos_cfg.kp = axis_cfg.pos_kp;
+    pos_cfg.ki = axis_cfg.pos_ki;
+    pos_cfg.kd = axis_cfg.pos_kd;
+    pos_cfg.i_limit = 1.0f;      // 默认限幅
+    pos_cfg.output_limit = 1.0f; // 默认输出限幅
+    pos_cfg.dt = 0.01f;          // 固定周期
     pos_pids_[i].setConfig(pos_cfg);
 
     PID_Controller::Config vel_cfg;
-    vel_cfg.kp = cfg.vel_pid.kp;
-    vel_cfg.ki = cfg.vel_pid.ki;
-    vel_cfg.kd = cfg.vel_pid.kd;
-    vel_cfg.i_limit = cfg.vel_pid.i_limit;
-    vel_cfg.output_limit = cfg.vel_pid.output_limit;
-    vel_cfg.dt = cfg.vel_pid.dt;
+    vel_cfg.kp = axis_cfg.vel_kp;
+    vel_cfg.ki = axis_cfg.vel_ki;
+    vel_cfg.kd = axis_cfg.vel_kd;
+    vel_cfg.i_limit = 1.0f;
+    vel_cfg.output_limit = 1.0f;
+    vel_cfg.dt = 0.01f;
     vel_pids_[i].setConfig(vel_cfg);
   }
 }
@@ -148,15 +151,28 @@ std::array<float, 4> ChassisManager::update(const float actual_p[4],
 
   std::array<float, 4> v_target_world = {0};
   for (int i = 0; i < 4; i++) {
-    ProfileState d = profiles_[i].update(target_p[i], dt);
     if (level_ == auv::common::ControlLevel::POSITION) {
+      ProfileState d = profiles_[i].update(target_p[i], dt);
       // 位置环的导数项使用速度误差 (v_ref - v_actual)
       float pos_derivative = d.v - actual_v[i];
       v_target_world[i] = pos_pids_[i].compute(d.p - actual_p[i], dt, pos_derivative) + d.v;
+    } else if (level_ == auv::common::ControlLevel::VELOCITY) {
+      // 速度环模式：我们需要同步影子平滑器的位置值，防止切回位置环时发生阶跃
+      // 同时直接使用 target_p 作为目标速度
+      profiles_[i].align(actual_p[i], target_p[i]);
+      v_target_world[i] = target_p[i];
     } else {
-      v_target_world[i] = d.v;
+      v_target_world[i] = 0.0f;
     }
   }
+
+  // 获取当前机体系下的实际速度（用于速度环计算）
+  // 此时 actual_v 通常是世界系速度，我们需要把它转到机体系才能和 v_target_body 进行 PID 计算
+  float actual_v_body[4];
+  CoordinateManager::worldToBody(actual_p[3], actual_v[0], actual_v[1], 
+                                  actual_v_body[0], actual_v_body[1]);
+  actual_v_body[2] = actual_v[2];
+  actual_v_body[3] = actual_v[3];
 
   // 坐标系转换：将世界系 (NED) 的目标速度转换为机体系 (Body)
   float v_target_body[4];
@@ -168,28 +184,29 @@ std::array<float, 4> ChassisManager::update(const float actual_p[4],
   for (int i = 0; i < 4; i++) {
     float f_base = 0.0f;
     if (level_ == auv::common::ControlLevel::POSITION || level_ == auv::common::ControlLevel::VELOCITY) {
-      // 使用机体系下的目标速度与真实速度进行闭环
-      // 速度环导数项使用 (a_ref - a_actual)，其中 a_actual 由实际速度差分得到
-      float a_ref = profiles_[i].getState().a;
+      // 使用机体系下的目标速度与机体系下的真实速度进行闭环
+      float a_ref = (level_ == auv::common::ControlLevel::POSITION) ? profiles_[i].getState().a : 0.0f;
       float a_actual = 0.0f;
       if (last_update_tick_ != 0 && dt > 0.0f) {
-        a_actual = (actual_v[i] - last_actual_v_[i]) / dt;
+        a_actual = (actual_v_body[i] - last_v_body_[i]) / dt;
       }
       float vel_derivative = a_ref - a_actual;
 
-      f_base = vel_pids_[i].compute(v_target_body[i] - actual_v[i], dt, vel_derivative);
+      f_base = vel_pids_[i].compute(v_target_body[i] - actual_v_body[i], dt, vel_derivative);
 
-      // 前馈加速度仍然叠加
+      // 前馈加速度叠加
       f_base += 1.0f * a_ref;
     }
     output_forces[i] = f_base + target_forces_[i];
   }
 
+  for (int i = 0; i < 4; i++) {
+    last_v_body_[i] = actual_v_body[i];
+  }
+
   last_z_thrust_ = output_forces[2];
   last_output_forces_ = output_forces; // 更新快照
 
-  // 更新实际速度快照，用于下一周期的加速度估计
-  for (int i = 0; i < 4; i++) last_actual_v_[i] = actual_v[i];
   return output_forces;
 }
 

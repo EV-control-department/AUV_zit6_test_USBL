@@ -76,24 +76,22 @@ enum class ZDataSource {
 
 // --- 自动生成的配置结构体 ---
 
-struct PIDConfig {
-    float kp;
-    float ki;
-    float kd;
-    float i_limit;
-    float output_limit;
-    float dt;
-};
-
-struct ChassisProfile {
-    float default_max_v;
-    float default_max_a;
+struct AxisConfig {
+    float pos_kp;
+    float pos_ki;
+    float pos_kd;
+    float vel_kp;
+    float vel_ki;
+    float vel_kd;
+    float max_v;
+    float max_a;
 };
 
 struct ChassisConfig {
-    ChassisProfile profile;
-    PIDConfig pos_pid;
-    PIDConfig vel_pid;
+    AxisConfig x;
+    AxisConfig y;
+    AxisConfig z;
+    AxisConfig yaw;
 };
 
 struct SoftWatchdogConfig {
@@ -112,11 +110,19 @@ struct SensorsConfig {
     ZDataSource z_data_source;
 };
 
+struct SimulationConfig {
+    bool hitl_enabled;
+    float mass;
+    float drag;
+    float thrust_k;
+};
+
 struct SystemConfig {
     ChassisConfig chassis;
     InsConfig ins;
     SoftWatchdogConfig soft_watchdog;
     SensorsConfig sensors;
+    SimulationConfig simulation;
 };
 
 // 全局配置实例声明
@@ -142,13 +148,15 @@ namespace config {{
 
 SystemConfig sys_config = {{
     .chassis = {{
-        .profile = {{ {config['chassis']['profile']['default_max_v']}, {config['chassis']['profile']['default_max_a']} }},
-        .pos_pid = {{ {config['chassis']['pid']['pos']['kp']}, {config['chassis']['pid']['pos']['ki']}, {config['chassis']['pid']['pos']['kd']}, {config['chassis']['pid']['pos']['i_limit']}, {config['chassis']['pid']['pos']['output_limit']}, {config['chassis']['pid']['pos']['dt']} }},
-        .vel_pid = {{ {config['chassis']['pid']['vel']['kp']}, {config['chassis']['pid']['vel']['ki']}, {config['chassis']['pid']['vel']['kd']}, {config['chassis']['pid']['vel']['i_limit']}, {config['chassis']['pid']['vel']['output_limit']}, {config['chassis']['pid']['vel']['dt']} }}
+        .x = {{ {config['chassis']['x']['pos_kp']}, {config['chassis']['x']['pos_ki']}, {config['chassis']['x']['pos_kd']}, {config['chassis']['x']['vel_kp']}, {config['chassis']['x']['vel_ki']}, {config['chassis']['x']['vel_kd']}, {config['chassis']['x']['max_v']}, {config['chassis']['x']['max_a']} }},
+        .y = {{ {config['chassis']['y']['pos_kp']}, {config['chassis']['y']['pos_ki']}, {config['chassis']['y']['pos_kd']}, {config['chassis']['y']['vel_kp']}, {config['chassis']['y']['vel_ki']}, {config['chassis']['y']['vel_kd']}, {config['chassis']['y']['max_v']}, {config['chassis']['y']['max_a']} }},
+        .z = {{ {config['chassis']['z']['pos_kp']}, {config['chassis']['z']['pos_ki']}, {config['chassis']['z']['pos_kd']}, {config['chassis']['z']['vel_kp']}, {config['chassis']['z']['vel_ki']}, {config['chassis']['z']['vel_kd']}, {config['chassis']['z']['max_v']}, {config['chassis']['z']['max_a']} }},
+        .yaw = {{ {config['chassis']['yaw']['pos_kp']}, {config['chassis']['yaw']['pos_ki']}, {config['chassis']['yaw']['pos_kd']}, {config['chassis']['yaw']['vel_kp']}, {config['chassis']['yaw']['vel_ki']}, {config['chassis']['yaw']['vel_kd']}, {config['chassis']['yaw']['max_v']}, {config['chassis']['yaw']['max_a']} }}
     }},
     .ins = {{ {config['ins']['init_lat']}, {config['ins']['init_lon']} }},
     .soft_watchdog = {{ {config['soft_watchdog']['timeout_ms']}, {str(config['soft_watchdog']['check_microros']).lower()}, {str(config['soft_watchdog']['check_ins']).lower()}, {str(config['soft_watchdog']['check_depth']).lower()} }},
-    .sensors = {{ ZDataSource::{ "USE_MS5837_Z" if config['z_data_sourse'] == 'use_ms5837_z' else "USE_INS_INTEGRATED_Z" } }}
+    .sensors = {{ ZDataSource::{ "USE_MS5837_Z" if config['z_data_sourse'] == 'use_ms5837_z' else "USE_INS_INTEGRATED_Z" } }},
+    .simulation = {{ {str(config['simulation']['hitl_enabled']).lower()}, {config['simulation']['mass']}, {config['simulation']['drag']}, {config['simulation']['thrust_k']} }}
 }};
 
 const ParamMeta SYSTEM_PARAMS[] = {{
@@ -158,9 +166,7 @@ const ParamMeta SYSTEM_PARAMS[] = {{
         cpp_path = p['path']
         # 修正 JSON 路径到 C++ 成员路径的映射
         if cpp_path == "z_data_sourse": cpp_path = "sensors.z_data_source"
-        elif "chassis.pid.pos." in cpp_path: cpp_path = cpp_path.replace("chassis.pid.pos.", "chassis.pos_pid.")
-        elif "chassis.pid.vel." in cpp_path: cpp_path = cpp_path.replace("chassis.pid.vel.", "chassis.vel_pid.")
-        elif "soft_watchdog." in cpp_path: cpp_path = cpp_path.replace("soft_watchdog.", "soft_watchdog.") # 无需变化但保持结构
+        # 不再需要旧的 PID 映射，因为现在是扁平化的 AxisConfig
 
         cpp_content += f'    {{"{p["path"]}", &sys_config.{cpp_path}, {p["type"]}}},\n'
     

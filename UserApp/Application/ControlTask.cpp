@@ -4,12 +4,17 @@
 #include "task.h"
 #include "SoftWatchdog.hpp"
 #include "SystemConfig.hpp"
+#include "AuvSimulator.hpp"
 #include <string.h>
 #include "SerialPort.hpp"
 #include <cstdio>
 
 using namespace auv::device;
 using namespace auv::control;
+
+// 仿真引擎实例 (HITL 模式)
+static AuvSimulator g_hitl_sim(0.01f);
+static bool g_sim_inited = false;
 
 
 void ControlTask::fillActualState(const auv::common::NavState &nav, float (&actual_p)[4], float (&actual_v)[4]) {
@@ -89,17 +94,42 @@ void ControlTask::refreshHardwareWatchdogIfNeeded() {
 }
 
 auv::common::NavState ControlTask::updateNavigation() {
-    auv::common::NavState nav = auv::shared::snapshotNavState();
-    ins_driver.update(nav);
+    auv::common::NavState nav;
 
-    // 根据配置选择是否使用独立的 MS5837 深度覆盖融合深度
-    if (auv::config::sys_config.sensors.z_data_source == auv::config::ZDataSource::USE_MS5837_Z) {
-        float depth_snapshot = 0.0f;
-        taskENTER_CRITICAL();
-        depth_snapshot = current_depth_z;
-        taskEXIT_CRITICAL();
+    // 锁定逻辑：如果已经解锁，则根据当时是否触发了仿真初始化来决定数据源，不再受运行时 config 突变影响
+    bool use_sim = is_system_armed ? g_sim_inited : auv::config::sys_config.simulation.hitl_enabled;
 
-        nav.z = depth_snapshot;
+    // 检查是否启用 HITL 仿真模式
+    if (use_sim) {
+        if (!g_sim_inited) {
+            // 首次启动仿真，尝试对齐当前传感器位置（如果有的话）
+            auto hardware_nav = auv::shared::snapshotNavState();
+            float p0[4] = {hardware_nav.x, hardware_nav.y, hardware_nav.z, hardware_nav.yaw};
+            g_hitl_sim.reset(p0);
+            g_sim_inited = true;
+        }
+
+        auto p = g_hitl_sim.getPosition();
+        auto v = g_hitl_sim.getVelocity();
+        nav.x = p[0]; nav.y = p[1]; nav.z = p[2]; nav.yaw = p[3];
+        nav.vx = v[0]; nav.vy = v[1]; nav.vz = v[2]; nav.vyaw = v[3];
+        nav.imu_state = 4; // 强制模拟为最优导航状态 (Mode 4)
+        nav.timestamp = HAL_GetTick();
+    } else {
+        // 正常：读取原始硬件数据
+        nav = auv::shared::snapshotNavState();
+        ins_driver.update(nav);
+
+        // 根据配置选择是否使用独立的 MS5837 深度覆盖融合深度
+        if (auv::config::sys_config.sensors.z_data_source == auv::config::ZDataSource::USE_MS5837_Z) {
+            float depth_snapshot = 0.0f;
+            taskENTER_CRITICAL();
+            depth_snapshot = current_depth_z;
+            taskEXIT_CRITICAL();
+
+            nav.z = depth_snapshot;
+        }
+        g_sim_inited = false; // 退出仿真时重置标记
     }
 
     taskENTER_CRITICAL();
@@ -150,15 +180,24 @@ void ControlTask::handleArmState(const auv::common::NavState &nav, uint32_t now)
         const uint32_t hbt_data = last_arm_heartbeat_data;
         taskEXIT_CRITICAL();
 
-        if (hbt_data == kRemoteModeHeartbeatData || auv::shared::isNavigationValid(nav)) {
+        // 允许解锁逻辑：
+        // 1. 数据为 kRemoteModeHeartbeatData (3)
+        // 2. 数据为 1 且 (导航有效 或 处于仿真模式)
+        bool can_arm = (hbt_data == kRemoteModeHeartbeatData) || 
+                       (hbt_data == 1 && (auv::shared::isNavigationValid(nav) || auv::config::sys_config.simulation.hitl_enabled));
+
+        if (can_arm) {
             taskENTER_CRITICAL();
             if (!is_system_armed) {
-                // 如果是刚解锁，将当前原始坐标注入注入驱动作为“家”偏移
-                // 注意：此时 nav 已经是经过偏移处理的，但在刚解锁瞬间，驱动层的 use_offset 还是 false
-                // 所以拿到的 nav 是原始值。注入后，下一帧起所有 nav 都会减去这个值。
+                // 解锁瞬间的行为锁定：
+                // 1. 锁定仿真模式状态：如果在此时开启了仿真，则整个 Arm 周期都应维持仿真
+                // (此处通过 g_sim_inited 标志位配合 sys_config 实现逻辑锁定)
+                
+                // 2. 注入驱动层偏移（建立“家”坐标系）
+                // 注意：在仿真模式下，nav 已经是相对坐标，但 setHomeOffset 会处理初始对齐
                 auv::device::ins_driver.setHomeOffset(nav.x, nav.y, nav.z, nav.yaw);
                 
-                // 控制器目标设为 0 (因为漂移已经被驱动层抵消了)
+                // 3. 锁定控制器目标为当前点（即新坐标系的 0 点）
                 target_p[0] = 0.0f;
                 target_p[1] = 0.0f;
                 target_p[2] = 0.0f;
@@ -166,7 +205,19 @@ void ControlTask::handleArmState(const auv::common::NavState &nav, uint32_t now)
             }
             is_system_armed = true;
             taskEXIT_CRITICAL();
+
+            const char amsg[] = "INFO: System ARMED\r\n";
+            auv::porting::SerialPort::transmitDebug((uint8_t*)amsg, sizeof(amsg)-1);
         } else {
+            // 如果是因为导航无效导致的无法解锁，打印提示
+            if (hbt_data == 1 && !(auv::shared::isNavigationValid(nav) || auv::config::sys_config.simulation.hitl_enabled)) {
+                static uint32_t last_warn_ms = 0;
+                if (now - last_warn_ms > 2000) {
+                    last_warn_ms = now;
+                    const char msg[] = "WARN: Arm denied - Navigation NOT valid\r\n";
+                    auv::porting::SerialPort::transmitDebug((uint8_t*)msg, sizeof(msg)-1);
+                }
+            }
             taskENTER_CRITICAL();
             arm_heartbeat_count = 0;
             taskEXIT_CRITICAL();
@@ -193,6 +244,15 @@ void ControlTask::computeAndPublish(const auv::common::NavState &nav) {
     taskEXIT_CRITICAL();
 
     auto forces = chassis.update(actual_p, actual_v, target_snapshot);
+
+    // 如果满足仿真锁定状态，将计算出的推力喂回仿真引擎
+    bool use_sim = is_system_armed ? g_sim_inited : auv::config::sys_config.simulation.hitl_enabled;
+    if (use_sim && g_sim_inited) {
+        g_hitl_sim.step(forces, 
+                       auv::config::sys_config.simulation.mass, 
+                       auv::config::sys_config.simulation.drag, 
+                       auv::config::sys_config.simulation.thrust_k);
+    }
 
     taskENTER_CRITICAL();
     for (int i = 0; i < 4; ++i) {

@@ -40,8 +40,12 @@ namespace auv {
 namespace shared {
 
 bool isNavigationValid(const auv::common::NavState &nav) {
-    // 只要惯导进入 03 SINS/GPS/DVL模式 或 04 04 SINS/DVL模式且数据新鲜，就认为 Ready
-    return ((nav.imu_state == 3 || nav.imu_state == 4) && auv::device::ins_driver.isDataFresh());
+    // 仿真模式下只要状态正确即有效；非仿真模式下需检查硬件数据新鲜度
+    bool state_ok = (nav.imu_state == 3 || nav.imu_state == 4);
+    if (auv::config::sys_config.simulation.hitl_enabled) {
+        return state_ok;
+    }
+    return (state_ok && auv::device::ins_driver.isDataFresh());
 }
 
 auv::common::NavState snapshotNavState() {

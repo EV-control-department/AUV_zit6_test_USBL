@@ -88,7 +88,7 @@ private:
     std::array<float, 4> target_forces_  = {0}; ///< 压入推力环的直接力/偏置
     std::array<float, 4> last_output_forces_ = {0}; ///< 记录上周期的最终输出，用于无扰切换
     float last_z_thrust_ = 0.0f;               ///< 记录上周期的 Z 轴推力，用于 Trim Pre-loading
-    std::array<float, 4> last_actual_v_ = {0}; ///< 上周期实际速度，用于计算加速度（用于 D 项）
+    std::array<float, 4> last_v_body_ = {0};   ///< 上周期机体系实际速度，用于计算加速度（用于 D 项）
     uint32_t last_update_tick_ = 0;            ///< 用于自动计算 dt
     auv::config::ChassisConfig config_; ///< 当前应用的底盘参数
 };

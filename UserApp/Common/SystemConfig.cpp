@@ -5,13 +5,15 @@ namespace config {
 
 SystemConfig sys_config = {
     .chassis = {
-        .profile = { 0.5, 0.2 },
-        .pos_pid = { 0.01, 0.0, 0.0, 1.0, 1.0, 0.01 },
-        .vel_pid = { 0.01, 0.005, 0.01, 1.0, 1.0, 0.01 }
+        .x = { 0.01, 0.0, 0.0, 0.01, 0.0, 0.01, 0.5, 0.2 },
+        .y = { 0.01, 0.0, 0.0, 0.01, 0.0, 0.01, 0.5, 0.2 },
+        .z = { 0.01, 0.0, 0.0, 0.01, 0.0, 0.01, 0.5, 0.2 },
+        .yaw = { 0.01, 0.0, 0.0, 0.01, 0.0, 0.01, 0.5, 0.2 }
     },
     .ins = { 45.7749, 126.6765 },
     .soft_watchdog = { 3000, true, false, false },
-    .sensors = { ZDataSource::USE_MS5837_Z }
+    .sensors = { ZDataSource::USE_MS5837_Z },
+    .simulation = { false, 20.0, 15.0, 300.0 }
 };
 
 const ParamMeta SYSTEM_PARAMS[] = {
@@ -20,26 +22,48 @@ const ParamMeta SYSTEM_PARAMS[] = {
     {"soft_watchdog.check_microros", &sys_config.soft_watchdog.check_microros, ParamType::BOOL},
     {"soft_watchdog.check_ins", &sys_config.soft_watchdog.check_ins, ParamType::BOOL},
     {"soft_watchdog.check_depth", &sys_config.soft_watchdog.check_depth, ParamType::BOOL},
-    {"chassis.profile.default_max_v", &sys_config.chassis.profile.default_max_v, ParamType::FLOAT},
-    {"chassis.profile.default_max_a", &sys_config.chassis.profile.default_max_a, ParamType::FLOAT},
-    {"chassis.pid.pos.kp", &sys_config.chassis.pos_pid.kp, ParamType::FLOAT},
-    {"chassis.pid.pos.ki", &sys_config.chassis.pos_pid.ki, ParamType::FLOAT},
-    {"chassis.pid.pos.kd", &sys_config.chassis.pos_pid.kd, ParamType::FLOAT},
-    {"chassis.pid.pos.i_limit", &sys_config.chassis.pos_pid.i_limit, ParamType::FLOAT},
-    {"chassis.pid.pos.output_limit", &sys_config.chassis.pos_pid.output_limit, ParamType::FLOAT},
-    {"chassis.pid.pos.dt", &sys_config.chassis.pos_pid.dt, ParamType::FLOAT},
-    {"chassis.pid.vel.kp", &sys_config.chassis.vel_pid.kp, ParamType::FLOAT},
-    {"chassis.pid.vel.ki", &sys_config.chassis.vel_pid.ki, ParamType::FLOAT},
-    {"chassis.pid.vel.kd", &sys_config.chassis.vel_pid.kd, ParamType::FLOAT},
-    {"chassis.pid.vel.i_limit", &sys_config.chassis.vel_pid.i_limit, ParamType::FLOAT},
-    {"chassis.pid.vel.output_limit", &sys_config.chassis.vel_pid.output_limit, ParamType::FLOAT},
-    {"chassis.pid.vel.dt", &sys_config.chassis.vel_pid.dt, ParamType::FLOAT},
+    {"chassis.x.pos_kp", &sys_config.chassis.x.pos_kp, ParamType::FLOAT},
+    {"chassis.x.pos_ki", &sys_config.chassis.x.pos_ki, ParamType::FLOAT},
+    {"chassis.x.pos_kd", &sys_config.chassis.x.pos_kd, ParamType::FLOAT},
+    {"chassis.x.vel_kp", &sys_config.chassis.x.vel_kp, ParamType::FLOAT},
+    {"chassis.x.vel_ki", &sys_config.chassis.x.vel_ki, ParamType::FLOAT},
+    {"chassis.x.vel_kd", &sys_config.chassis.x.vel_kd, ParamType::FLOAT},
+    {"chassis.x.max_v", &sys_config.chassis.x.max_v, ParamType::FLOAT},
+    {"chassis.x.max_a", &sys_config.chassis.x.max_a, ParamType::FLOAT},
+    {"chassis.y.pos_kp", &sys_config.chassis.y.pos_kp, ParamType::FLOAT},
+    {"chassis.y.pos_ki", &sys_config.chassis.y.pos_ki, ParamType::FLOAT},
+    {"chassis.y.pos_kd", &sys_config.chassis.y.pos_kd, ParamType::FLOAT},
+    {"chassis.y.vel_kp", &sys_config.chassis.y.vel_kp, ParamType::FLOAT},
+    {"chassis.y.vel_ki", &sys_config.chassis.y.vel_ki, ParamType::FLOAT},
+    {"chassis.y.vel_kd", &sys_config.chassis.y.vel_kd, ParamType::FLOAT},
+    {"chassis.y.max_v", &sys_config.chassis.y.max_v, ParamType::FLOAT},
+    {"chassis.y.max_a", &sys_config.chassis.y.max_a, ParamType::FLOAT},
+    {"chassis.z.pos_kp", &sys_config.chassis.z.pos_kp, ParamType::FLOAT},
+    {"chassis.z.pos_ki", &sys_config.chassis.z.pos_ki, ParamType::FLOAT},
+    {"chassis.z.pos_kd", &sys_config.chassis.z.pos_kd, ParamType::FLOAT},
+    {"chassis.z.vel_kp", &sys_config.chassis.z.vel_kp, ParamType::FLOAT},
+    {"chassis.z.vel_ki", &sys_config.chassis.z.vel_ki, ParamType::FLOAT},
+    {"chassis.z.vel_kd", &sys_config.chassis.z.vel_kd, ParamType::FLOAT},
+    {"chassis.z.max_v", &sys_config.chassis.z.max_v, ParamType::FLOAT},
+    {"chassis.z.max_a", &sys_config.chassis.z.max_a, ParamType::FLOAT},
+    {"chassis.yaw.pos_kp", &sys_config.chassis.yaw.pos_kp, ParamType::FLOAT},
+    {"chassis.yaw.pos_ki", &sys_config.chassis.yaw.pos_ki, ParamType::FLOAT},
+    {"chassis.yaw.pos_kd", &sys_config.chassis.yaw.pos_kd, ParamType::FLOAT},
+    {"chassis.yaw.vel_kp", &sys_config.chassis.yaw.vel_kp, ParamType::FLOAT},
+    {"chassis.yaw.vel_ki", &sys_config.chassis.yaw.vel_ki, ParamType::FLOAT},
+    {"chassis.yaw.vel_kd", &sys_config.chassis.yaw.vel_kd, ParamType::FLOAT},
+    {"chassis.yaw.max_v", &sys_config.chassis.yaw.max_v, ParamType::FLOAT},
+    {"chassis.yaw.max_a", &sys_config.chassis.yaw.max_a, ParamType::FLOAT},
     {"ins.init_lat", &sys_config.ins.init_lat, ParamType::FLOAT},
     {"ins.init_lon", &sys_config.ins.init_lon, ParamType::FLOAT},
+    {"simulation.hitl_enabled", &sys_config.simulation.hitl_enabled, ParamType::BOOL},
+    {"simulation.mass", &sys_config.simulation.mass, ParamType::FLOAT},
+    {"simulation.drag", &sys_config.simulation.drag, ParamType::FLOAT},
+    {"simulation.thrust_k", &sys_config.simulation.thrust_k, ParamType::FLOAT},
     {NULL, NULL, ParamType::FLOAT}
 };
 
-const size_t SYSTEM_PARAMS_COUNT = 21;
+const size_t SYSTEM_PARAMS_COUNT = 43;
 
 } // namespace config
 } // namespace auv

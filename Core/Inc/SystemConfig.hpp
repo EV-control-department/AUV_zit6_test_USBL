@@ -30,22 +30,24 @@ enum class ZDataSource {
 
 // --- 自动生成的配置结构体 ---
 
-struct AxisConfig {
-    float pos_kp;
-    float pos_ki;
-    float pos_kd;
-    float vel_kp;
-    float vel_ki;
-    float vel_kd;
-    float max_v;
-    float max_a;
+struct PIDConfig {
+    float kp;
+    float ki;
+    float kd;
+    float i_limit;
+    float output_limit;
+    float dt;
+};
+
+struct ChassisProfile {
+    float default_max_v;
+    float default_max_a;
 };
 
 struct ChassisConfig {
-    AxisConfig x;
-    AxisConfig y;
-    AxisConfig z;
-    AxisConfig yaw;
+    ChassisProfile profile;
+    PIDConfig pos_pid;
+    PIDConfig vel_pid;
 };
 
 struct SoftWatchdogConfig {
