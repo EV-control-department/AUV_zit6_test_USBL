@@ -16,7 +16,7 @@ private:
 	static constexpr uint32_t kLoopPeriodMs = 10;
 	static constexpr uint32_t kArmedHeartbeatTimeoutMs = 500; // 恢复：短阈值，快速 disarm
 	static constexpr uint32_t kDisarmedHeartbeatTimeoutMs = 1000;
-	static constexpr uint32_t kArmMinDurationMs = 2000;
+	static constexpr uint32_t kArmMinDurationMs = 1000;
 	static constexpr uint32_t kArmMinHeartbeatCount = 10;
 	static constexpr uint32_t kRemoteModeHeartbeatData = 3;
 

@@ -40,7 +40,7 @@ namespace auv {
 namespace shared {
 
 bool isNavigationValid(const auv::common::NavState &nav) {
-    // 只要惯导进入 03 或 04 模式且数据新鲜，就认为 Ready
+    // 只要惯导进入 03 SINS/GPS/DVL模式 或 04 04 SINS/DVL模式且数据新鲜，就认为 Ready
     return ((nav.imu_state == 3 || nav.imu_state == 4) && auv::device::ins_driver.isDataFresh());
 }
 

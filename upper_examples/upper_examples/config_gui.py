@@ -143,12 +143,20 @@ class ConfigApp(QMainWindow):
         return res
 
     def load_structure(self):
-        # 尝试多个路径定位 config.json
+        # 优化：优先使用 ROS 2 路径查找，其次是当前工作目录
+        from ament_index_python.packages import get_package_share_directory
         search_paths = [
-            self.config_path,
-            os.path.join(os.path.dirname(__file__), '../../config.json'),
-            os.path.join(os.path.dirname(__file__), '../../../config.json'),
+            os.path.join(os.getcwd(), 'config.json'),
+            os.path.join(os.path.dirname(__file__), '../../config.json'), # 源码路径
+            self.config_path # 默认路径
         ]
+        
+        # 如果在 ROS 环境运行，添加 share 目录（如果 config.json 被安装了）
+        try:
+            share_dir = get_package_share_directory('upper_examples')
+            search_paths.insert(0, os.path.join(share_dir, 'config.json'))
+        except:
+            pass
         
         found = False
         for p in search_paths:

@@ -120,6 +120,7 @@ void ControlTask::forceDisarmWithNeutralLevel(const auv::common::NavState &nav) 
     taskENTER_CRITICAL();
     is_system_armed = false;
     arm_heartbeat_count = 0;
+    auv::device::ins_driver.clearHomeOffset(); // 失锁时恢复原始坐标系
     taskEXIT_CRITICAL();
     setControlLevelNone(nav);
 }
@@ -151,6 +152,18 @@ void ControlTask::handleArmState(const auv::common::NavState &nav, uint32_t now)
 
         if (hbt_data == kRemoteModeHeartbeatData || auv::shared::isNavigationValid(nav)) {
             taskENTER_CRITICAL();
+            if (!is_system_armed) {
+                // 如果是刚解锁，将当前原始坐标注入注入驱动作为“家”偏移
+                // 注意：此时 nav 已经是经过偏移处理的，但在刚解锁瞬间，驱动层的 use_offset 还是 false
+                // 所以拿到的 nav 是原始值。注入后，下一帧起所有 nav 都会减去这个值。
+                auv::device::ins_driver.setHomeOffset(nav.x, nav.y, nav.z, nav.yaw);
+                
+                // 控制器目标设为 0 (因为漂移已经被驱动层抵消了)
+                target_p[0] = 0.0f;
+                target_p[1] = 0.0f;
+                target_p[2] = 0.0f;
+                target_p[3] = 0.0f;
+            }
             is_system_armed = true;
             taskEXIT_CRITICAL();
         } else {

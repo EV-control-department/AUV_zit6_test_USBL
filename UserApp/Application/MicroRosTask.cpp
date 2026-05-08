@@ -341,7 +341,15 @@ void MicroRosTask::run() {
                 if (now_ms - last_hbt_pub_tick >= 1000) { last_hbt_pub_tick = now_ms; node_heartbeat_msg_.data = now_ms; rcl_publish(&zithbt_pub_, &node_heartbeat_msg_, NULL); }
                 if (now_ms - last_vel_pub_tick >= 20) { last_vel_pub_tick = now_ms; auto nav = auv::shared::snapshotNavState(); vel_buf_[0] = nav.vx; vel_buf_[1] = nav.vy; vel_buf_[2] = nav.vz; vel_buf_[3] = nav.vyaw; rcl_publish(&vel_pub_, &vel_fb_msg_, NULL); }
                 if (now_ms - last_thr_pub_tick >= 33) { last_thr_pub_tick = now_ms; taskENTER_CRITICAL(); for (int i = 0; i < 4; i++) thr_buf_[i] = last_output_forces[i]; taskEXIT_CRITICAL(); rcl_publish(&thr_pub_, &thr_fb_msg_, NULL); }
-                if (now_ms - last_pos_pub_tick >= 33) { last_pos_pub_tick = now_ms; auto nav = auv::shared::snapshotNavState(); pos_buf_[0] = nav.x; pos_buf_[1] = nav.y; pos_buf_[2] = nav.z; pos_buf_[3] = nav.yaw; rcl_publish(&pos_pub_, &pos_fb_msg_, NULL); }
+                if (now_ms - last_pos_pub_tick >= 33) {
+                    last_pos_pub_tick = now_ms;
+                    auto nav = auv::shared::snapshotNavState();
+                    pos_buf_[0] = nav.x;
+                    pos_buf_[1] = nav.y;
+                    pos_buf_[2] = nav.z;
+                    pos_buf_[3] = nav.yaw;
+                    rcl_publish(&pos_pub_, &pos_fb_msg_, NULL);
+                }
                 if (now_ms - last_status_pub_tick >= 100) {
                     last_status_pub_tick = now_ms; auv::common::NavState nav = auv::shared::snapshotNavState();
                     taskENTER_CRITICAL();
