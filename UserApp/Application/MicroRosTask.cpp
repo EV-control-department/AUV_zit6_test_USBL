@@ -27,7 +27,6 @@
 #include <cmath>
 #include <cstring>
 #include <cstdio>
-#include "SerialPort.hpp"
 #include "cJSON.h"
 
 extern "C" {
@@ -47,8 +46,7 @@ static void cjson_free(void *ptr) { microros_deallocate(ptr, NULL); }
 // 实例指针定义
 MicroRosTask *MicroRosTask::instance_ = nullptr;
 
-// debug serial (UART7) for on-target prints
-static auv::porting::SerialPort dbg_uart(&huart7);
+// (on-target debug UART removed — no debug pins available)
 
 // --- 成员回调实现 ---
 void MicroRosTask::onZitPid(const void *msgin) {
@@ -235,14 +233,17 @@ static size_t append_float_fixed(char *buf, size_t bufsize, size_t pos, float v,
 }
 
 void MicroRosTask::onUpdateParams(const void *reqin, rmw_request_id_t *req_id, void *resin) {
-    const auto *req = static_cast<const zit6_interfaces__srv__UpdateParams_Request *>(reqin);
     auto *res = static_cast<zit6_interfaces__srv__UpdateParams_Response *>(resin);
     if (!res) return;
     res->success = false;
     rosidl_runtime_c__String__assign(&res->message, "");
+    if (!reqin) {
+        rosidl_runtime_c__String__assign(&res->message, "null request");
+        return;
+    }
+    const auto *req = static_cast<const zit6_interfaces__srv__UpdateParams_Request *>(reqin);
 
-    // debug entry
-    dbg_uart.transmit((const uint8_t*)"onUpdateParams called\r\n", 19);
+    // avoid blocking UART in service callback: do not perform blocking dbg serial transmit here
 
     // start from current chassis config (read axis 0 as representative)
     auv::config::ChassisConfig cfg;
@@ -365,9 +366,7 @@ void MicroRosTask::onUpdateParams(const void *reqin, rmw_request_id_t *req_id, v
         char diag[256];
         int n = snprintf(diag, sizeof(diag), "json_len=%lu json_size=%lu cap=%lu ptr=0x%08lx paths=%lu values=%lu head=%s",
             (unsigned long)json_strlen, (unsigned long)json_size, (unsigned long)json_cap, (unsigned long)json_ptr, (unsigned long)paths_cnt, (unsigned long)vals_cnt, head);
-        // echo to debug UART as well
-        if (n > 0) dbg_uart.transmit((const uint8_t*)diag, (uint16_t)(n>0?n:0));
-        dbg_uart.transmit((const uint8_t*)"\r\n", 2);
+        // avoid blocking UART in callback; copy diagnostic into response message
         if (n > 0) rosidl_runtime_c__String__assign(&res->message, diag);
         else rosidl_runtime_c__String__assign(&res->message, "no-op");
         res->success = false;
@@ -375,57 +374,218 @@ void MicroRosTask::onUpdateParams(const void *reqin, rmw_request_id_t *req_id, v
 }
 
 void MicroRosTask::onGetParams(const void *reqin, rmw_request_id_t *req_id, void *resin) {
-    (void)reqin; (void)req_id;
+    (void)req_id;
     auto *res = static_cast<zit6_interfaces__srv__GetParams_Response *>(resin);
     if (!res) return;
-    // build simple JSON from current config (axis 0 as representative)
-    dbg_uart.transmit((const uint8_t*)"onGetParams called\r\n", 16);
+
+    // current representative values (axis 0)
     float v = 0.0f, a = 0.0f;
     auv::control::chassis.getProfileLimits(0, v, a);
     auto p_cfg = auv::control::chassis.getPIDConfig(0, true);
     auto vel_cfg = auv::control::chassis.getPIDConfig(0, false);
+
+    const auto *req = static_cast<const zit6_interfaces__srv__GetParams_Request *>(reqin);
     char buf[512];
     size_t pos = 0;
-    pos = append_str(buf, sizeof(buf), pos, "{\"chassis\":{\"profile\":{\"default_max_v\":");
-    pos = append_float_fixed(buf, sizeof(buf), pos, v, 6);
-    pos = append_str(buf, sizeof(buf), pos, ",\"default_max_a\":");
-    pos = append_float_fixed(buf, sizeof(buf), pos, a, 6);
-    pos = append_str(buf, sizeof(buf), pos, "},\"pid\":{\"pos\":{\"kp\":");
-    pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.kp, 6);
-    pos = append_str(buf, sizeof(buf), pos, ",\"ki\":");
-    pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.ki, 6);
-    pos = append_str(buf, sizeof(buf), pos, ",\"kd\":");
-    pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.kd, 6);
-    pos = append_str(buf, sizeof(buf), pos, ",\"i_limit\":");
-    pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.i_limit, 6);
-    pos = append_str(buf, sizeof(buf), pos, ",\"output_limit\":");
-    pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.output_limit, 6);
-    pos = append_str(buf, sizeof(buf), pos, ",\"dt\":");
-    pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.dt, 6);
-    pos = append_str(buf, sizeof(buf), pos, "},\"vel\":{\"kp\":");
-    pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.kp, 6);
-    pos = append_str(buf, sizeof(buf), pos, ",\"ki\":");
-    pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.ki, 6);
-    pos = append_str(buf, sizeof(buf), pos, ",\"kd\":");
-    pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.kd, 6);
-    pos = append_str(buf, sizeof(buf), pos, ",\"i_limit\":");
-    pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.i_limit, 6);
-    pos = append_str(buf, sizeof(buf), pos, ",\"output_limit\":");
-    pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.output_limit, 6);
-    pos = append_str(buf, sizeof(buf), pos, ",\"dt\":");
-    pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.dt, 6);
-    pos = append_str(buf, sizeof(buf), pos, "}}}}");
+
+    // If no paths requested, return full minimal JSON (backwards compatible)
+    if (!req || req->paths.size == 0 || req->paths.data == NULL) {
+        pos = append_str(buf, sizeof(buf), pos, "{\"chassis\":{\"profile\":{\"default_max_v\":");
+        pos = append_float_fixed(buf, sizeof(buf), pos, v, 6);
+        pos = append_str(buf, sizeof(buf), pos, ",\"default_max_a\":");
+        pos = append_float_fixed(buf, sizeof(buf), pos, a, 6);
+        pos = append_str(buf, sizeof(buf), pos, "},\"pid\":{\"pos\":{\"kp\":");
+        pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.kp, 6);
+        pos = append_str(buf, sizeof(buf), pos, ",\"ki\":");
+        pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.ki, 6);
+        pos = append_str(buf, sizeof(buf), pos, ",\"kd\":");
+        pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.kd, 6);
+        pos = append_str(buf, sizeof(buf), pos, ",\"i_limit\":");
+        pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.i_limit, 6);
+        pos = append_str(buf, sizeof(buf), pos, ",\"output_limit\":");
+        pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.output_limit, 6);
+        pos = append_str(buf, sizeof(buf), pos, ",\"dt\":");
+        pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.dt, 6);
+        pos = append_str(buf, sizeof(buf), pos, "},\"vel\":{\"kp\":");
+        pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.kp, 6);
+        pos = append_str(buf, sizeof(buf), pos, ",\"ki\":");
+        pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.ki, 6);
+        pos = append_str(buf, sizeof(buf), pos, ",\"kd\":");
+        pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.kd, 6);
+        pos = append_str(buf, sizeof(buf), pos, ",\"i_limit\":");
+        pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.i_limit, 6);
+        pos = append_str(buf, sizeof(buf), pos, ",\"output_limit\":");
+        pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.output_limit, 6);
+        pos = append_str(buf, sizeof(buf), pos, ",\"dt\":");
+        pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.dt, 6);
+        pos = append_str(buf, sizeof(buf), pos, "}}}");
+
+        if (pos > 0 && pos < sizeof(buf)) {
+            if (res->config_json.data && res->config_json.capacity >= pos + 1) {
+                memcpy(res->config_json.data, buf, pos);
+                res->config_json.data[pos] = '\0';
+                res->config_json.size = pos;
+            } else {
+                rosidl_runtime_c__String__assign(&res->config_json, buf);
+            }
+            res->success = true;
+        } else {
+            if (res->config_json.data && res->config_json.capacity >= 3) {
+                memcpy(res->config_json.data, "{}", 2);
+                res->config_json.data[2] = '\0';
+                res->config_json.size = 2;
+            } else {
+                rosidl_runtime_c__String__assign(&res->config_json, "{}");
+            }
+            res->success = false;
+        }
+        return;
+    }
+
+    // Parse requested paths and build minimal JSON containing only requested fields
+    bool any = false;
+    bool want_profile_v = false, want_profile_a = false;
+    bool want_pos_kp = false, want_pos_ki = false, want_pos_kd = false, want_pos_i_limit = false, want_pos_output = false, want_pos_dt = false;
+    bool want_vel_kp = false, want_vel_ki = false, want_vel_kd = false, want_vel_i_limit = false, want_vel_output = false, want_vel_dt = false;
+
+    for (size_t i = 0; i < req->paths.size; ++i) {
+        if (!req->paths.data) break;
+        const rosidl_runtime_c__String *s = &req->paths.data[i];
+        const char *path = (s && s->data) ? s->data : NULL;
+        if (!path) continue;
+        if (strcmp(path, "chassis.profile.default_max_v") == 0) { want_profile_v = true; any = true; }
+        else if (strcmp(path, "chassis.profile.default_max_a") == 0) { want_profile_a = true; any = true; }
+        else if (strcmp(path, "chassis.pid.pos.kp") == 0) { want_pos_kp = true; any = true; }
+        else if (strcmp(path, "chassis.pid.pos.ki") == 0) { want_pos_ki = true; any = true; }
+        else if (strcmp(path, "chassis.pid.pos.kd") == 0) { want_pos_kd = true; any = true; }
+        else if (strcmp(path, "chassis.pid.pos.i_limit") == 0) { want_pos_i_limit = true; any = true; }
+        else if (strcmp(path, "chassis.pid.pos.output_limit") == 0) { want_pos_output = true; any = true; }
+        else if (strcmp(path, "chassis.pid.pos.dt") == 0) { want_pos_dt = true; any = true; }
+        else if (strcmp(path, "chassis.pid.vel.kp") == 0) { want_vel_kp = true; any = true; }
+        else if (strcmp(path, "chassis.pid.vel.ki") == 0) { want_vel_ki = true; any = true; }
+        else if (strcmp(path, "chassis.pid.vel.kd") == 0) { want_vel_kd = true; any = true; }
+        else if (strcmp(path, "chassis.pid.vel.i_limit") == 0) { want_vel_i_limit = true; any = true; }
+        else if (strcmp(path, "chassis.pid.vel.output_limit") == 0) { want_vel_output = true; any = true; }
+        else if (strcmp(path, "chassis.pid.vel.dt") == 0) { want_vel_dt = true; any = true; }
+    }
+
+    if (!any) {
+        // no recognized paths requested
+        if (res->config_json.data && res->config_json.capacity >= 3) {
+            memcpy(res->config_json.data, "{}", 2);
+            res->config_json.data[2] = '\0';
+            res->config_json.size = 2;
+        } else {
+            rosidl_runtime_c__String__assign(&res->config_json, "{}");
+        }
+        res->success = false;
+        return;
+    }
+
+    // Build minimal JSON
+    pos = append_str(buf, sizeof(buf), pos, "{");
+    pos = append_str(buf, sizeof(buf), pos, "\"chassis\":{");
+    bool first_chassis = true;
+
+    // profile
+    if (want_profile_v || want_profile_a) {
+        pos = append_str(buf, sizeof(buf), pos, "\"profile\":{");
+        bool first = true;
+        if (want_profile_v) {
+            pos = append_str(buf, sizeof(buf), pos, "\"default_max_v\":");
+            pos = append_float_fixed(buf, sizeof(buf), pos, v, 6);
+            first = false;
+        }
+        if (want_profile_a) {
+            if (!first) pos = append_str(buf, sizeof(buf), pos, ",");
+            pos = append_str(buf, sizeof(buf), pos, "\"default_max_a\":");
+            pos = append_float_fixed(buf, sizeof(buf), pos, a, 6);
+        }
+        pos = append_str(buf, sizeof(buf), pos, "}");
+        first_chassis = false;
+    }
+
+    // pid
+    bool any_pos = want_pos_kp || want_pos_ki || want_pos_kd || want_pos_i_limit || want_pos_output || want_pos_dt;
+    bool any_vel = want_vel_kp || want_vel_ki || want_vel_kd || want_vel_i_limit || want_vel_output || want_vel_dt;
+    if (any_pos || any_vel) {
+        if (!first_chassis) pos = append_str(buf, sizeof(buf), pos, ",");
+        pos = append_str(buf, sizeof(buf), pos, "\"pid\":{");
+        bool first_pid = true;
+        if (any_pos) {
+            pos = append_str(buf, sizeof(buf), pos, "\"pos\":{");
+            bool first_pos = true;
+            if (want_pos_kp) { pos = append_str(buf, sizeof(buf), pos, "\"kp\":"); pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.kp, 6); first_pos = false; }
+            if (want_pos_ki) { if (!first_pos) pos = append_str(buf, sizeof(buf), pos, ","); pos = append_str(buf, sizeof(buf), pos, "\"ki\":"); pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.ki, 6); first_pos = false; }
+            if (want_pos_kd) { if (!first_pos) pos = append_str(buf, sizeof(buf), pos, ","); pos = append_str(buf, sizeof(buf), pos, "\"kd\":"); pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.kd, 6); first_pos = false; }
+            if (want_pos_i_limit) { if (!first_pos) pos = append_str(buf, sizeof(buf), pos, ","); pos = append_str(buf, sizeof(buf), pos, "\"i_limit\":"); pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.i_limit, 6); first_pos = false; }
+            if (want_pos_output) { if (!first_pos) pos = append_str(buf, sizeof(buf), pos, ","); pos = append_str(buf, sizeof(buf), pos, "\"output_limit\":"); pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.output_limit, 6); first_pos = false; }
+            if (want_pos_dt) { if (!first_pos) pos = append_str(buf, sizeof(buf), pos, ","); pos = append_str(buf, sizeof(buf), pos, "\"dt\":"); pos = append_float_fixed(buf, sizeof(buf), pos, p_cfg.dt, 6); first_pos = false; }
+            pos = append_str(buf, sizeof(buf), pos, "}");
+            first_pid = false;
+        }
+        if (any_vel) {
+            if (!first_pid) pos = append_str(buf, sizeof(buf), pos, ",");
+            pos = append_str(buf, sizeof(buf), pos, "\"vel\":{");
+            bool first_vel = true;
+            if (want_vel_kp) { pos = append_str(buf, sizeof(buf), pos, "\"kp\":"); pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.kp, 6); first_vel = false; }
+            if (want_vel_ki) { if (!first_vel) pos = append_str(buf, sizeof(buf), pos, ","); pos = append_str(buf, sizeof(buf), pos, "\"ki\":"); pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.ki, 6); first_vel = false; }
+            if (want_vel_kd) { if (!first_vel) pos = append_str(buf, sizeof(buf), pos, ","); pos = append_str(buf, sizeof(buf), pos, "\"kd\":"); pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.kd, 6); first_vel = false; }
+            if (want_vel_i_limit) { if (!first_vel) pos = append_str(buf, sizeof(buf), pos, ","); pos = append_str(buf, sizeof(buf), pos, "\"i_limit\":"); pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.i_limit, 6); first_vel = false; }
+            if (want_vel_output) { if (!first_vel) pos = append_str(buf, sizeof(buf), pos, ","); pos = append_str(buf, sizeof(buf), pos, "\"output_limit\":"); pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.output_limit, 6); first_vel = false; }
+            if (want_vel_dt) { if (!first_vel) pos = append_str(buf, sizeof(buf), pos, ","); pos = append_str(buf, sizeof(buf), pos, "\"dt\":"); pos = append_float_fixed(buf, sizeof(buf), pos, vel_cfg.dt, 6); first_vel = false; }
+            pos = append_str(buf, sizeof(buf), pos, "}");
+        }
+        pos = append_str(buf, sizeof(buf), pos, "}");
+    }
+
+    // close chassis and root
+    pos = append_str(buf, sizeof(buf), pos, "}");
+    pos = append_str(buf, sizeof(buf), pos, "}");
+
     if (pos > 0 && pos < sizeof(buf)) {
-        rosidl_runtime_c__String__assign(&res->config_json, buf);
+        if (res->config_json.data && res->config_json.capacity >= pos + 1) {
+            memcpy(res->config_json.data, buf, pos);
+            res->config_json.data[pos] = '\0';
+            res->config_json.size = pos;
+        } else {
+            rosidl_runtime_c__String__assign(&res->config_json, buf);
+        }
         res->success = true;
     } else {
-        rosidl_runtime_c__String__assign(&res->config_json, "{}");
+        if (res->config_json.data && res->config_json.capacity >= 3) {
+            memcpy(res->config_json.data, "{}", 2);
+            res->config_json.data[2] = '\0';
+            res->config_json.size = 2;
+        } else {
+            rosidl_runtime_c__String__assign(&res->config_json, "{}");
+        }
         res->success = false;
     }
 }
 
 void MicroRosTask::cleanupMicroRos() {
     rclc_executor_fini(&executor_);
+    // free pre-allocated request/response buffers
+    if (get_req_.paths.data) {
+        for (size_t _i = 0; _i < get_req_.paths.capacity; ++_i) {
+            if (get_req_.paths.data[_i].data) {
+                microros_deallocate(get_req_.paths.data[_i].data, NULL);
+                get_req_.paths.data[_i].data = NULL;
+                get_req_.paths.data[_i].capacity = 0;
+                get_req_.paths.data[_i].size = 0;
+            }
+        }
+        rosidl_runtime_c__String__Sequence_fini(&get_req_.paths);
+    }
+    if (update_req_.json.data) {
+        microros_deallocate(update_req_.json.data, NULL);
+        update_req_.json.data = NULL; update_req_.json.capacity = 0; update_req_.json.size = 0;
+    }
+    if (get_res_.config_json.data) {
+        microros_deallocate(get_res_.config_json.data, NULL);
+        get_res_.config_json.data = NULL; get_res_.config_json.capacity = 0; get_res_.config_json.size = 0;
+    }
     rcl_service_fini(&update_params_srv_, &node_);
     rcl_service_fini(&get_params_srv_, &node_);
     rcl_publisher_fini(&pos_pub_, &node_);
@@ -508,14 +668,7 @@ void MicroRosTask::run() {
                     // Initialize update_params service and check return codes
                     {
                         rcl_ret_t rc = rclc_service_init_default(&update_params_srv_, &node_, ROSIDL_GET_SRV_TYPE_SUPPORT(zit6_interfaces, srv, UpdateParams), "/zit6/update_params");
-                        char tmp[128]; int n = 0;
-                        if (rc != RCL_RET_OK) {
-                            n = snprintf(tmp, sizeof(tmp), "svc init update_params failed: %d\r\n", (int)rc);
-                            dbg_uart.transmit((const uint8_t*)tmp, (uint16_t)(n>0?n:0));
-                        } else {
-                            n = snprintf(tmp, sizeof(tmp), "svc init update_params ok\r\n");
-                            dbg_uart.transmit((const uint8_t*)tmp, (uint16_t)(n>0?n:0));
-                        }
+                        (void)rc;
                         zit6_interfaces__srv__UpdateParams_Request__init(&update_req_);
                         // Pre-allocate buffer for incoming JSON string
                         update_req_.json.data = (char*)microros_allocate(1024, NULL);
@@ -524,40 +677,31 @@ void MicroRosTask::run() {
 
                         zit6_interfaces__srv__UpdateParams_Response__init(&update_res_);
                         rc = rclc_executor_add_service_with_request_id(&executor_, &update_params_srv_, &update_req_, &update_res_, &MicroRosTask::updateParamsCb);
-                        if (rc != RCL_RET_OK) {
-                            n = snprintf(tmp, sizeof(tmp), "add svc update_params failed: %d\r\n", (int)rc);
-                            dbg_uart.transmit((const uint8_t*)tmp, (uint16_t)(n>0?n:0));
-                        } else {
-                            n = snprintf(tmp, sizeof(tmp), "add svc update_params ok\r\n");
-                            dbg_uart.transmit((const uint8_t*)tmp, (uint16_t)(n>0?n:0));
-                        }
+                        (void)rc;
                     }
 
                     // Initialize get_params service and check return codes
                     {
                         rcl_ret_t rc = rclc_service_init_default(&get_params_srv_, &node_, ROSIDL_GET_SRV_TYPE_SUPPORT(zit6_interfaces, srv, GetParams), "/zit6/get_params");
-                        char tmp[128]; int n = 0;
-                        if (rc != RCL_RET_OK) {
-                            n = snprintf(tmp, sizeof(tmp), "svc init get_params failed: %d\r\n", (int)rc);
-                            dbg_uart.transmit((const uint8_t*)tmp, (uint16_t)(n>0?n:0));
-                        } else {
-                            n = snprintf(tmp, sizeof(tmp), "svc init get_params ok\r\n");
-                            dbg_uart.transmit((const uint8_t*)tmp, (uint16_t)(n>0?n:0));
-                        }
+                        (void)rc;
                         zit6_interfaces__srv__GetParams_Request__init(&get_req_);
+                        // pre-initialize paths sequence to avoid NULL data pointer on incoming requests
+                        rosidl_runtime_c__String__Sequence__init(&get_req_.paths, 8);
+                        // allocate per-element string buffers to give rmw a place to write incoming path strings
+                        if (get_req_.paths.data) {
+                            for (size_t _i = 0; _i < get_req_.paths.capacity; ++_i) {
+                                get_req_.paths.data[_i].data = (char*)microros_allocate(64, NULL);
+                                get_req_.paths.data[_i].capacity = 64;
+                                get_req_.paths.data[_i].size = 0;
+                            }
+                        }
                         zit6_interfaces__srv__GetParams_Response__init(&get_res_);
                         // Pre-allocate buffer for outgoing JSON string
                         get_res_.config_json.data = (char*)microros_allocate(1024, NULL);
                         get_res_.config_json.capacity = 1024;
                         get_res_.config_json.size = 0;
                         rc = rclc_executor_add_service_with_request_id(&executor_, &get_params_srv_, &get_req_, &get_res_, &MicroRosTask::getParamsCb);
-                        if (rc != RCL_RET_OK) {
-                            n = snprintf(tmp, sizeof(tmp), "add svc get_params failed: %d\r\n", (int)rc);
-                            dbg_uart.transmit((const uint8_t*)tmp, (uint16_t)(n>0?n:0));
-                        } else {
-                            n = snprintf(tmp, sizeof(tmp), "add svc get_params ok\r\n");
-                            dbg_uart.transmit((const uint8_t*)tmp, (uint16_t)(n>0?n:0));
-                        }
+                        (void)rc;
                     }
                     state = AGENT_CONNECTED;
                 }
