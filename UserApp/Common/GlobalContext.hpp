@@ -41,6 +41,7 @@ extern float last_output_forces[4];
 extern float last_dt_ms;
 extern uint32_t last_received_seq;
 extern float current_depth_z;
+extern volatile bool planner_replan_flag;
 
 // --- 安全 ARM 状态机变量 ---
 extern bool is_system_armed;

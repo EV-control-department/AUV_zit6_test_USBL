@@ -22,3 +22,5 @@ log/
 # 备份文件
 *~
 *.bak
+
+micro_ros_stm32cubemx_utils/microros_static_library_ide/libmicroro*

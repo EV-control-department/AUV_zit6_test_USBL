@@ -16,8 +16,15 @@ EXTRA_PKG_DIR="micro_ros_stm32cubemx_utils/microros_static_library_ide/library_g
 HASH_FILE=".msg_hash"
 LIB_FILE="micro_ros_stm32cubemx_utils/microros_static_library_ide/libmicroros/libmicroros.a"
 
-# 计算当前接口定义的哈希值
-CURRENT_HASH=$(find zit6_interfaces -type f -exec md5sum {} + | sort | md5sum | awk '{print $1}')
+# 计算当前接口定义与生成配置的哈希值
+# 如果存在 micro-ROS 库生成配置目录，也把它纳入哈希计算，
+# 这样修改 colcon.meta 等生成相关配置可以触发重建。
+HASH_PATHS="zit6_interfaces"
+GEN_DIR="micro_ros_stm32cubemx_utils/microros_static_library_ide/library_generation"
+if [ -d "$GEN_DIR" ]; then
+    HASH_PATHS="$HASH_PATHS $GEN_DIR"
+fi
+CURRENT_HASH=$(find $HASH_PATHS -type f -exec md5sum {} + | sort | md5sum | awk '{print $1}')
 OLD_HASH=""
 if [ -f "$HASH_FILE" ]; then OLD_HASH=$(cat "$HASH_FILE"); fi
 
@@ -63,7 +70,8 @@ cmake --build build
 echo "[3/3] Building ROS 2 host interfaces..."
 if [ -f /opt/ros/humble/setup.bash ]; then source /opt/ros/humble/setup.bash; fi
 if [ -f /opt/ros/jazzy/setup.bash ]; then source /opt/ros/jazzy/setup.bash; fi
-colcon build --packages-select zit6_interfaces --symlink-install
+# 指定 base path 为 `zit6_interfaces`，避免顶层 CMake 包（AUV_zit6）阻止对子目录包的发现
+colcon build --base-paths zit6_interfaces --packages-select zit6_interfaces --symlink-install
 
 echo "========================================================="
 echo "   Build Success!"
