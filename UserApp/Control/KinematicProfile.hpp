@@ -71,6 +71,14 @@ public:
     ProfileState update(float target_p, float dt);
 
     /**
+     * @brief 速度跟踪演进
+     * @param target_v 目标期望速度
+     * @param dt 步长
+     * @return 最新的演进状态
+     */
+    ProfileState updateVelocity(float target_v, float dt);
+
+    /**
      * @brief 无扰动状态对齐
      * @param actual_p 当前传感器的真实位置值
      * @param actual_v 当前传感器的真实速度值

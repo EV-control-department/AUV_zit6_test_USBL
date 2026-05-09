@@ -63,9 +63,13 @@ void MicroRosTask::onZitSetpoint(const void *msgin) {
     if (!std::isfinite(msg->x) || !std::isfinite(msg->y) || !std::isfinite(msg->z) || !std::isfinite(msg->yaw)) return;
     if (!is_system_armed) return;
 
-    uint32_t level = msg->control_key & 0x03;
-    // 如果 level >= 3 (即 0x03)，视为非法或保留，直接忽略（防止因为 control_key: 3 导致系统无响应）
-    if (level >= 3) return; 
+    uint32_t level_idx = msg->control_key & 0x03;
+    if (level_idx >= 3) return;
+
+    auv::common::ControlLevel new_level;
+    if (level_idx == 0) new_level = auv::common::ControlLevel::POSITION;
+    else if (level_idx == 1) new_level = auv::common::ControlLevel::VELOCITY;
+    else new_level = auv::common::ControlLevel::ACTUATOR;
 
     bool is_body = (msg->control_key & 0x10) != 0;
     bool is_inc = (msg->control_key & 0x20) != 0;
@@ -73,106 +77,102 @@ void MicroRosTask::onZitSetpoint(const void *msgin) {
     float val[4] = {msg->x, msg->y, msg->z, msg->yaw};
 
     auto nav = auv::shared::snapshotNavState();
-    // 修改：允许在仿真模式直接通过导航有效性检查
     bool nav_valid = auv::shared::isNavigationValid(nav) || auv::config::sys_config.simulation.hitl_enabled;
-    if ((level == 0 || level == 1) && !nav_valid) return;
+    if ((new_level == auv::common::ControlLevel::POSITION || new_level == auv::common::ControlLevel::VELOCITY) && !nav_valid) return;
 
-    if (level == 2) { // FORCE
-        float fx, fy;
-        if (is_body) {
-            // 机体系力，直接使用
-            fx = val[0];
-            fy = val[1];
-        } else {
-            // 世界系力，需要转到机体系再控制
-            auv::control::CoordinateManager::worldToBody(nav.yaw, val[0], val[1], fx, fy);
-        }
-        float forces[4] = {fx, fy, val[2], val[3]};
-        taskENTER_CRITICAL();
-        // 确保切换到 ACTUATOR 模式前，先清理之前可能残留在 target_p 中的速度指令
-        // 防止后续切回速度环时发生突跳
-        for (int i = 0; i < 4; i++) target_p[i] = 0.0f;
-
-        // 修正：在 FORCE 模式下也需要根据 type_mask 决定是否更新对应的轴
-        static float last_forces[4] = {0};
-        for (int i = 0; i < 4; i++) {
-            if (!(mask & (1 << i))) last_forces[i] = (i < 2) ? (i == 0 ? fx : fy) : val[i];
-        }
-        auv::control::chassis.setActuatorForces(last_forces);
-        float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw};
-        float actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
-        auv::control::chassis.setControlLevel(auv::common::ControlLevel::ACTUATOR, actual_p, actual_v);
-        taskEXIT_CRITICAL();
-    } else if (level == 1) { // VEL
-        taskENTER_CRITICAL();
-        // 速度环处理逻辑
-        // 注意：速度环的 target_p 数组实际存储的是【目标速度(NED系)】
-        float target_world_v[4] = {0};
-        if (is_body) {
-            // 机体系速度转世界系速度
-            auv::control::CoordinateManager::bodyToWorld(nav.yaw, val[0], val[1], target_world_v[0], target_world_v[1]);
-            target_world_v[2] = val[2];
-            target_world_v[3] = val[3];
-        } else {
-            // 已经是世界系速度
-            for (int i = 0; i < 4; i++) target_world_v[i] = val[i];
-        }
-
-        // 应用掩码：0更新，1不更新
-        for (int i = 0; i < 4; i++) {
-            if (!(mask & (1 << i))) target_p[i] = target_world_v[i];
-        }
-
-        float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw};
-        float actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
-        auv::control::chassis.setControlLevel(auv::common::ControlLevel::VELOCITY, actual_p, actual_v);
-        taskEXIT_CRITICAL();
-    } else if (level == 0) { // POS
-        taskENTER_CRITICAL();
-        float final_target_world_p[4];
-        for (int i = 0; i < 4; i++) final_target_world_p[i] = target_p[i];
-
-        if (is_body) {
-            // 机体系模式
-            if (is_inc) {
-                // 增量模式：基于当前实际位置和航向叠加位移
-                float wx, wy;
-                auv::control::CoordinateManager::bodyToWorld(nav.yaw, val[0], val[1], wx, wy);
-                final_target_world_p[0] = nav.x + wx;
-                final_target_world_p[1] = nav.y + wy;
-                final_target_world_p[2] = nav.z + val[2];
-                final_target_world_p[3] = nav.yaw + val[3];
+    taskENTER_CRITICAL();
+    
+    // 1. 模式切换对齐 (Bumpless Transition / Anti-Leakage)
+    if (new_level != auv::control::chassis.getControlLevel()) {
+        if (new_level == auv::common::ControlLevel::POSITION) {
+            target_p[0] = nav.x; target_p[1] = nav.y; target_p[2] = nav.z; target_p[3] = nav.yaw;
+        } else if (new_level == auv::common::ControlLevel::VELOCITY) {
+            if (is_body) {
+                target_p[0] = nav.vx; target_p[1] = nav.vy; target_p[2] = nav.vz; target_p[3] = nav.vyaw;
             } else {
-                // 绝对模式：基于导航原点但按当前航向旋转映射
                 float wx, wy;
-                auv::control::CoordinateManager::bodyToWorld(nav.yaw, val[0], val[1], wx, wy);
-                final_target_world_p[0] = wx;
-                final_target_world_p[1] = wy;
-                final_target_world_p[2] = val[2];
-                final_target_world_p[3] = val[3];
+                auv::control::CoordinateManager::bodyToWorld(nav.yaw, nav.vx, nav.vy, wx, wy);
+                target_p[0] = wx; target_p[1] = wy; target_p[2] = nav.vz; target_p[3] = nav.vyaw;
             }
-        } else {
-            // 世界系模式
-            if (is_inc) {
-                // 世界系增量
-                float current_p[4] = {nav.x, nav.y, nav.z, nav.yaw};
-                for (int i = 0; i < 4; i++) final_target_world_p[i] = current_p[i] + val[i];
-            } else {
-                // 世界系绝对
-                for (int i = 0; i < 4; i++) final_target_world_p[i] = val[i];
-            }
+            auv::control::chassis.setVelocityTargetFrame(is_body);
         }
-
-        // 统一应用掩码更新 target_p
-        for (int i = 0; i < 4; i++) {
-            if (!(mask & (1 << i))) target_p[i] = final_target_world_p[i];
-        }
-
-        float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw};
-        float actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
-        auv::control::chassis.setControlLevel(auv::common::ControlLevel::POSITION, actual_p, actual_v);
-        taskEXIT_CRITICAL();
     }
+
+    // 2. 执行具体指令逻辑
+    if (new_level == auv::common::ControlLevel::ACTUATOR) {
+        float fx, fy;
+        if (is_body) { fx = val[0]; fy = val[1]; }
+        else { auv::control::CoordinateManager::worldToBody(nav.yaw, val[0], val[1], fx, fy); }
+        
+        static float last_forces[4] = {0};
+        static auv::common::ControlLevel last_l = auv::common::ControlLevel::NONE;
+        
+        // 如果是刚切入 ACTUATOR 模式，清空之前的手动推力缓存
+        if (last_l != auv::common::ControlLevel::ACTUATOR) {
+            for (int i = 0; i < 4; i++) last_forces[i] = 0.0f;
+        }
+        last_l = auv::common::ControlLevel::ACTUATOR;
+
+        if (!(mask & 1)) last_forces[0] = fx;
+        if (!(mask & 2)) last_forces[1] = fy;
+        if (!(mask & 4)) last_forces[2] = val[2];
+        if (!(mask & 8)) last_forces[3] = val[3];
+        
+        auv::control::chassis.setActuatorForces(last_forces);
+    } 
+    else if (new_level == auv::common::ControlLevel::VELOCITY) {
+        // 确保下次切回 ACTUATOR 时重置
+        static auv::common::ControlLevel last_l = auv::common::ControlLevel::NONE;
+        last_l = new_level;
+
+        auv::control::chassis.setVelocityTargetFrame(is_body);
+        for (int i = 0; i < 4; i++) {
+            if (!(mask & (1 << i))) {
+                if (is_inc) {
+                    // 速度增量模式：在当前目标速度基础上叠加
+                    target_p[i] += val[i];
+                } else {
+                    target_p[i] = val[i];
+                }
+            }
+        }
+    }
+    else if (new_level == auv::common::ControlLevel::POSITION) {
+        // 确保下次切回 ACTUATOR 时重置
+        static auv::common::ControlLevel last_l = auv::common::ControlLevel::NONE;
+        last_l = new_level;
+
+        for (int i = 0; i < 4; i++) {
+            if (!(mask & (1 << i))) {
+                if (is_inc) {
+                    if (is_body && i < 2) {
+                        // 机体系位置增量：根据当前航向角旋转增量后，累加到世界系目标上
+                        float wx, wy;
+                        auv::control::CoordinateManager::bodyToWorld(nav.yaw, (i==0?val[0]:0.0f), (i==1?val[1]:0.0f), wx, wy);
+                        if (i == 0) target_p[0] += wx;
+                        if (i == 1) target_p[1] += wy;
+                    } else {
+                        // 世界系位置/深度/偏航增量：直接累加到当前目标上
+                        target_p[i] += val[i];
+                    }
+                } else {
+                    // 非增量模式
+                    if (is_body && i < 2) {
+                        float wx, wy;
+                        auv::control::CoordinateManager::bodyToWorld(nav.yaw, val[0], val[1], wx, wy);
+                        target_p[0] = wx; target_p[1] = wy;
+                    } else {
+                        target_p[i] = val[i];
+                    }
+                }
+            }
+        }
+    }
+
+    float actual_p[4] = {nav.x, nav.y, nav.z, nav.yaw};
+    float actual_v[4] = {nav.vx, nav.vy, nav.vz, nav.vyaw};
+    auv::control::chassis.setControlLevel(new_level, actual_p, actual_v);
+    taskEXIT_CRITICAL();
 }
 
 void MicroRosTask::onArmHeartbeat(const void *msgin) {

@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <cmath>
 #include "SystemConfig.hpp"
 
 namespace auv {
@@ -16,27 +17,48 @@ public:
 
     /**
      * @brief 推进物理引擎一步
-     * @param forces 归一化推力 [-1.0, 1.0]
-     * @param mass 质量
-     * @param drag 线性阻力系数
+     * @param forces 归一化推力 [-1.0, 1.0] (Body frame)
+     * @param masses 各轴质量数组 [mx, my, mz, myaw]
+     * @param drags 各轴阻力数组 [dx, dy, dz, dyaw]
      * @param k 推力增益 (1.0 推力对应多少牛顿)
      */
-    void step(const std::array<float, 4>& forces, float mass, float drag, float k) {
-        if (mass <= 0.01f) mass = 20.0f; // 安全冗余
-
+    void step(const std::array<float, 4>& forces, 
+              const std::array<float, 4>& masses, 
+              const std::array<float, 4>& drags, 
+              float k) {
+        
+        // 1. 机体系加速度计算 (F_net = F_thrust - F_drag)
         for (int i = 0; i < 4; i++) {
-            // F_net = F_thrust - F_drag
+            float m = masses[i] > 0.01f ? masses[i] : 20.0f;
             float push = forces[i] * k;
-            float resist = velocity_[i] * drag;
-            float accel = (push - resist) / mass;
-
-            // 欧拉积分
+            float resist = velocity_[i] * drags[i];
+            float accel = (push - resist) / m;
             velocity_[i] += accel * dt_;
-            position_[i] += velocity_[i] * dt_;
         }
+
+        // 2. 将机体系速度转为世界系速度并更新位置
+        float yaw = position_[3];
+        float cos_y = std::cos(yaw);
+        float sin_y = std::sin(yaw);
+
+        float world_vx = velocity_[0] * cos_y - velocity_[1] * sin_y;
+        float world_vy = velocity_[0] * sin_y + velocity_[1] * cos_y;
+
+        position_[0] += world_vx * dt_;
+        position_[1] += world_vy * dt_;
+        position_[2] += velocity_[2] * dt_; // Z 轴
+        position_[3] += velocity_[3] * dt_; // Yaw 轴
+
+        // 航向角归一化 [-PI, PI]
+        while (position_[3] > 3.14159265f) position_[3] -= 6.2831853f;
+        while (position_[3] < -3.14159265f) position_[3] += 6.2831853f;
     }
 
     const std::array<float, 4>& getPosition() const { return position_; }
+    
+    /**
+     * @brief 获取机体系速度 (Surge, Sway, Heave, YawRate)
+     */
     const std::array<float, 4>& getVelocity() const { return velocity_; }
     
     void reset(const float p[4]) {

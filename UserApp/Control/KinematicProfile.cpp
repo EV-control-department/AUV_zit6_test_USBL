@@ -10,6 +10,23 @@ void KinematicProfile::setLimits(float max_v, float max_a) {
     limits_.max_a = std::abs(max_a);
 }
 
+ProfileState KinematicProfile::updateVelocity(float target_v, float dt) {
+    if (dt <= 0.0f || limits_.max_a <= 0.0f) {
+        state_.a = 0.0f;
+        return state_;
+    }
+
+    float v_cmd = std::max(-limits_.max_v, std::min(limits_.max_v, target_v));
+    float delta_v = v_cmd - state_.v;
+    
+    // 限制加速度
+    state_.a = std::max(-limits_.max_a, std::min(limits_.max_a, delta_v / dt));
+    
+    state_.v += state_.a * dt;
+    state_.p += state_.v * dt; // 位置依然累加，保证切回位置环时有参考点
+
+    return state_;
+}
 ProfileState KinematicProfile::update(float target_p, float dt) {
     if (dt <= 0.0f || limits_.max_v <= 0.0f || limits_.max_a <= 0.0f) {
         state_.a = 0.0f;

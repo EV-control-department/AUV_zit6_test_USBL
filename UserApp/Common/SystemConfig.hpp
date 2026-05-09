@@ -39,6 +39,8 @@ struct AxisConfig {
     float vel_kd;
     float max_v;
     float max_a;
+    float mass;
+    float drag;
 };
 
 struct ChassisConfig {

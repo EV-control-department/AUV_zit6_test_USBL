@@ -36,6 +36,9 @@ bool SerialPort::transmitDebug(const uint8_t* data, uint16_t len) {
 }
 
 uint16_t SerialPort::read(uint8_t* out_buf, uint16_t max_len) {
+    // Invalidate D-Cache to ensure the CPU reads the data actually written by DMA to RAM
+    SCB_InvalidateDCache_by_Addr((uint32_t*)rx_buffer_ptr_, rx_buf_size_);
+
     uint16_t current_pos = rx_buf_size_ - __HAL_DMA_GET_COUNTER(huart_->hdmarx);
     uint16_t bytes_to_read = 0;
 

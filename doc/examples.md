@@ -10,6 +10,7 @@ alias zit_src='source /home/doc049/dev/2026-auv-sub/AUV_zit6_cmake/install/setup
 alias zit_agt='zit_src && MicroXRCEAgent serial --dev /dev/ttyUSB0 -b 921600'
 alias zit_fox='zit_src && ros2 launch foxglove_bridge foxglove_bridge_launch.xml'
 alias zit_rqt='zit_src && rqt'
+alias zit_cfg='zit_src && ros2 run upper_examples cfg_tool'
 ```
 
 ---

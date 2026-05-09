@@ -78,8 +78,14 @@ public:
      */
     void setActuatorForces(const float forces[4]);
 
+    /**
+     * @brief 设置速度环目标是否为机体系锁定
+     */
+    void setVelocityTargetFrame(bool is_body) { target_v_is_body_ = is_body; }
+
 private:
     auv::common::ControlLevel level_ = auv::common::ControlLevel::NONE;
+    bool target_v_is_body_ = false; ///< 速度环目标是否为机体系
     
     std::array<KinematicProfile, 4> profiles_; ///< 4轴影子平滑器矩阵
     std::array<PID_Controller, 4> pos_pids_;  ///< 位置环 (P控制)

@@ -180,13 +180,6 @@ void INS_Driver::decodePacket(auv::common::NavState& s) {
     memcpy(&s.x, packet_buf_ + 99, 4);
     memcpy(&s.y, packet_buf_ + 103, 4);
 
-    // 应用软件偏置 (实现 Arm 时的归零逻辑)
-    if (use_offset_) {
-        s.x -= offset_x_;
-        s.y -= offset_y_;
-        s.z -= offset_z_;
-        s.yaw -= offset_yaw_;
-    }
 
     // 7. 模式与状态 (Offset 129 模式, Offset 115 状态)
     s.imu_state = packet_buf_[129]; 
@@ -206,6 +199,19 @@ void INS_Driver::decodePacket(auv::common::NavState& s) {
     s.vroll *= kDeg2Rad;
     s.vpitch *= kDeg2Rad;
     s.vyaw *= kDeg2Rad;
+
+    // 应用软件偏置 (实现 Arm 时的归零逻辑)
+    // 注意：偏置值是在 Arm 瞬间以弧度/米记录的，因此需在转换后减去
+    if (use_offset_) {
+        s.x -= offset_x_;
+        s.y -= offset_y_;
+        s.z -= offset_z_;
+        s.yaw -= offset_yaw_;
+        
+        // 航向角归一化 [-PI, PI]
+        while (s.yaw > 3.14159265f) s.yaw -= 6.2831853f;
+        while (s.yaw < -3.14159265f) s.yaw += 6.2831853f;
+    }
 
     frame_len_ = 0; 
 }

@@ -26,8 +26,8 @@ void ChassisManager::applyConfig(const auv::config::ChassisConfig& cfg) {
     pos_cfg.kp = axis_cfg.pos_kp;
     pos_cfg.ki = axis_cfg.pos_ki;
     pos_cfg.kd = axis_cfg.pos_kd;
-    pos_cfg.i_limit = 1.0f;      // 默认限幅
-    pos_cfg.output_limit = 1.0f; // 默认输出限幅
+    pos_cfg.i_limit = 500.0f;      // 增加积分限幅
+    pos_cfg.output_limit = 500.0f; // 增加输出限幅
     pos_cfg.dt = 0.01f;          // 固定周期
     pos_pids_[i].setConfig(pos_cfg);
 
@@ -35,8 +35,8 @@ void ChassisManager::applyConfig(const auv::config::ChassisConfig& cfg) {
     vel_cfg.kp = axis_cfg.vel_kp;
     vel_cfg.ki = axis_cfg.vel_ki;
     vel_cfg.kd = axis_cfg.vel_kd;
-    vel_cfg.i_limit = 1.0f;
-    vel_cfg.output_limit = 1.0f;
+    vel_cfg.i_limit = 500.0f;
+    vel_cfg.output_limit = 500.0f;
     vel_cfg.dt = 0.01f;
     vel_pids_[i].setConfig(vel_cfg);
   }
@@ -98,24 +98,31 @@ void ChassisManager::setControlLevel(auv::common::ControlLevel new_level,
                                      const float actual_v[4]) {
   if (new_level == level_)
     return;
-  // 切换到 POSITION：需要将影子平滑器与真实传感器对齐，且对 Z 轴采用积分继承策略
+  // 切换到 POSITION：对齐影子状态并清除 PID 积分
   if (new_level == auv::common::ControlLevel::POSITION) {
+    float actual_v_world[4];
+    CoordinateManager::bodyToWorld(actual_p[3], actual_v[0], actual_v[1], actual_v_world[0], actual_v_world[1]);
+    actual_v_world[2] = actual_v[2];
+    actual_v_world[3] = actual_v[3];
+
     for (int i = 0; i < 4; i++) {
-      profiles_[i].align(actual_p[i], actual_v[i]);
-      if (i == 2) {
-        // 对 Z 轴采用无扰动继承：将上一周期输出作为积分初值（由 PID 内部限幅）
-        vel_pids_[i].setIntegral(last_output_forces_[i]);
-      } else {
-        vel_pids_[i].reset();
-      }
+      profiles_[i].align(actual_p[i], actual_v_world[i]);
+      pos_pids_[i].reset();
+      vel_pids_[i].reset();
+      target_forces_[i] = 0.0f; // 清除推力环残余，防止作为偏置叠加到位置环
     }
   }
-
   // 切换到 VELOCITY：对齐影子状态并清除速度环积分
   else if (new_level == auv::common::ControlLevel::VELOCITY) {
+    float actual_v_world[4];
+    CoordinateManager::bodyToWorld(actual_p[3], actual_v[0], actual_v[1], actual_v_world[0], actual_v_world[1]);
+    actual_v_world[2] = actual_v[2];
+    actual_v_world[3] = actual_v[3];
+
     for (int i = 0; i < 4; i++) {
-      profiles_[i].align(actual_p[i], actual_v[i]);
+      profiles_[i].align(actual_p[i], actual_v_world[i]);
       vel_pids_[i].reset();
+      target_forces_[i] = 0.0f; // 清除推力环残余
     }
   }
 
@@ -149,43 +156,65 @@ std::array<float, 4> ChassisManager::update(const float actual_p[4],
   if (level_ == auv::common::ControlLevel::NONE)
     return output_forces;
 
+  // 计算世界系下的实际速度（用于位置环微分项）
+  float actual_v_world_now[4];
+  CoordinateManager::bodyToWorld(actual_p[3], actual_v[0], actual_v[1], 
+                                  actual_v_world_now[0], actual_v_world_now[1]);
+  actual_v_world_now[2] = actual_v[2];
+  actual_v_world_now[3] = actual_v[3];
+
   std::array<float, 4> v_target_world = {0};
   for (int i = 0; i < 4; i++) {
     if (level_ == auv::common::ControlLevel::POSITION) {
       ProfileState d = profiles_[i].update(target_p[i], dt);
-      // 位置环的导数项使用速度误差 (v_ref - v_actual)
-      float pos_derivative = d.v - actual_v[i];
+      // 修正：位置环的导数项应使用世界系下的速度误差 (v_ref_world - v_actual_world)
+      float actual_v_world_val = (i < 2) ? actual_v_world_now[i] : actual_v[i];
+      float pos_derivative = d.v - actual_v_world_val;
       v_target_world[i] = pos_pids_[i].compute(d.p - actual_p[i], dt, pos_derivative) + d.v;
     } else if (level_ == auv::common::ControlLevel::VELOCITY) {
-      // 速度环模式：我们需要同步影子平滑器的位置值，防止切回位置环时发生阶跃
-      // 同时直接使用 target_p 作为目标速度
-      profiles_[i].align(actual_p[i], target_p[i]);
-      v_target_world[i] = target_p[i];
+      // 速度环规划器演进
+      float target_v_world = 0.0f;
+      if (target_v_is_body_) {
+        // 如果是机体系目标，先转为世界系用于平滑器演进（保持位置参考点一致）
+        float vx_w, vy_w;
+        CoordinateManager::bodyToWorld(actual_p[3], target_p[0], target_p[1], vx_w, vy_w);
+        target_v_world = (i == 0) ? vx_w : (i == 1 ? vy_w : target_p[i]);
+      } else {
+        target_v_world = target_p[i];
+      }
+
+      ProfileState d = profiles_[i].updateVelocity(target_v_world, dt);
+      v_target_world[i] = d.v;
     } else {
       v_target_world[i] = 0.0f;
     }
   }
 
   // 获取当前机体系下的实际速度（用于速度环计算）
-  // 此时 actual_v 通常是世界系速度，我们需要把它转到机体系才能和 v_target_body 进行 PID 计算
   float actual_v_body[4];
-  CoordinateManager::worldToBody(actual_p[3], actual_v[0], actual_v[1], 
-                                  actual_v_body[0], actual_v_body[1]);
-  actual_v_body[2] = actual_v[2];
-  actual_v_body[3] = actual_v[3];
+  for (int i = 0; i < 4; i++) actual_v_body[i] = actual_v[i];
 
-  // 坐标系转换：将世界系 (NED) 的目标速度转换为机体系 (Body)
+  // 坐标系转换：将目标速度转换为机体系 (Body)
   float v_target_body[4];
-  CoordinateManager::worldToBody(actual_p[3], v_target_world[0], v_target_world[1], 
-                                  v_target_body[0], v_target_body[1]);
-  v_target_body[2] = v_target_world[2]; // Z 轴相同
-  v_target_body[3] = v_target_world[3]; // Yaw 轴相同
+  if (level_ == auv::common::ControlLevel::VELOCITY && target_v_is_body_) {
+    // 如果本来就是机体系目标，直接使用
+    for (int i = 0; i < 4; i++) v_target_body[i] = target_p[i];
+  } else {
+    // 否则从世界系转到机体系
+    CoordinateManager::worldToBody(actual_p[3], v_target_world[0], v_target_world[1], 
+                                    v_target_body[0], v_target_body[1]);
+    v_target_body[2] = v_target_world[2];
+    v_target_body[3] = v_target_world[3];
+  }
 
   for (int i = 0; i < 4; i++) {
     float f_base = 0.0f;
     if (level_ == auv::common::ControlLevel::POSITION || level_ == auv::common::ControlLevel::VELOCITY) {
+      // 获取当前轴的物理参数配置
+      const auv::config::AxisConfig& axis_cfg = (i == 0) ? config_.x : (i == 1 ? config_.y : (i == 2 ? config_.z : config_.yaw));
+
       // 使用机体系下的目标速度与机体系下的真实速度进行闭环
-      float a_ref = (level_ == auv::common::ControlLevel::POSITION) ? profiles_[i].getState().a : 0.0f;
+      float a_ref = profiles_[i].getState().a;
       float a_actual = 0.0f;
       if (last_update_tick_ != 0 && dt > 0.0f) {
         a_actual = (actual_v_body[i] - last_v_body_[i]) / dt;
@@ -194,8 +223,10 @@ std::array<float, 4> ChassisManager::update(const float actual_p[4],
 
       f_base = vel_pids_[i].compute(v_target_body[i] - actual_v_body[i], dt, vel_derivative);
 
-      // 前馈加速度叠加
-      f_base += 1.0f * a_ref;
+      // 前馈补偿：F_ff = mass * a_ref + drag * v_ref
+      float f_ff_accel = axis_cfg.mass * a_ref;
+      float f_ff_drag = axis_cfg.drag * v_target_body[i];
+      f_base += (f_ff_accel + f_ff_drag);
     }
     output_forces[i] = f_base + target_forces_[i];
   }

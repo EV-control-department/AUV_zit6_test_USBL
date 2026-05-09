@@ -85,6 +85,8 @@ struct AxisConfig {
     float vel_kd;
     float max_v;
     float max_a;
+    float mass;
+    float drag;
 };
 
 struct ChassisConfig {
@@ -148,10 +150,10 @@ namespace config {{
 
 SystemConfig sys_config = {{
     .chassis = {{
-        .x = {{ {config['chassis']['x']['pos_kp']}, {config['chassis']['x']['pos_ki']}, {config['chassis']['x']['pos_kd']}, {config['chassis']['x']['vel_kp']}, {config['chassis']['x']['vel_ki']}, {config['chassis']['x']['vel_kd']}, {config['chassis']['x']['max_v']}, {config['chassis']['x']['max_a']} }},
-        .y = {{ {config['chassis']['y']['pos_kp']}, {config['chassis']['y']['pos_ki']}, {config['chassis']['y']['pos_kd']}, {config['chassis']['y']['vel_kp']}, {config['chassis']['y']['vel_ki']}, {config['chassis']['y']['vel_kd']}, {config['chassis']['y']['max_v']}, {config['chassis']['y']['max_a']} }},
-        .z = {{ {config['chassis']['z']['pos_kp']}, {config['chassis']['z']['pos_ki']}, {config['chassis']['z']['pos_kd']}, {config['chassis']['z']['vel_kp']}, {config['chassis']['z']['vel_ki']}, {config['chassis']['z']['vel_kd']}, {config['chassis']['z']['max_v']}, {config['chassis']['z']['max_a']} }},
-        .yaw = {{ {config['chassis']['yaw']['pos_kp']}, {config['chassis']['yaw']['pos_ki']}, {config['chassis']['yaw']['pos_kd']}, {config['chassis']['yaw']['vel_kp']}, {config['chassis']['yaw']['vel_ki']}, {config['chassis']['yaw']['vel_kd']}, {config['chassis']['yaw']['max_v']}, {config['chassis']['yaw']['max_a']} }}
+        .x = {{ {config['chassis']['x']['pos_kp']}, {config['chassis']['x']['pos_ki']}, {config['chassis']['x']['pos_kd']}, {config['chassis']['x']['vel_kp']}, {config['chassis']['x']['vel_ki']}, {config['chassis']['x']['vel_kd']}, {config['chassis']['x']['max_v']}, {config['chassis']['x']['max_a']}, {config['chassis']['x']['mass']}, {config['chassis']['x']['drag']} }},
+        .y = {{ {config['chassis']['y']['pos_kp']}, {config['chassis']['y']['pos_ki']}, {config['chassis']['y']['pos_kd']}, {config['chassis']['y']['vel_kp']}, {config['chassis']['y']['vel_ki']}, {config['chassis']['y']['vel_kd']}, {config['chassis']['y']['max_v']}, {config['chassis']['y']['max_a']}, {config['chassis']['y']['mass']}, {config['chassis']['y']['drag']} }},
+        .z = {{ {config['chassis']['z']['pos_kp']}, {config['chassis']['z']['pos_ki']}, {config['chassis']['z']['pos_kd']}, {config['chassis']['z']['vel_kp']}, {config['chassis']['z']['vel_ki']}, {config['chassis']['z']['vel_kd']}, {config['chassis']['z']['max_v']}, {config['chassis']['z']['max_a']}, {config['chassis']['z']['mass']}, {config['chassis']['z']['drag']} }},
+        .yaw = {{ {config['chassis']['yaw']['pos_kp']}, {config['chassis']['yaw']['pos_ki']}, {config['chassis']['yaw']['pos_kd']}, {config['chassis']['yaw']['vel_kp']}, {config['chassis']['yaw']['vel_ki']}, {config['chassis']['yaw']['vel_kd']}, {config['chassis']['yaw']['max_v']}, {config['chassis']['yaw']['max_a']}, {config['chassis']['yaw']['mass']}, {config['chassis']['yaw']['drag']} }}
     }},
     .ins = {{ {config['ins']['init_lat']}, {config['ins']['init_lon']} }},
     .soft_watchdog = {{ {config['soft_watchdog']['timeout_ms']}, {str(config['soft_watchdog']['check_microros']).lower()}, {str(config['soft_watchdog']['check_ins']).lower()}, {str(config['soft_watchdog']['check_depth']).lower()} }},

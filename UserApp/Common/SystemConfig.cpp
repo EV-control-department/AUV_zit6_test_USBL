@@ -5,15 +5,15 @@ namespace config {
 
 SystemConfig sys_config = {
     .chassis = {
-        .x = { 0.01, 0.0, 0.0, 0.01, 0.0, 0.01, 0.5, 0.2 },
-        .y = { 0.01, 0.0, 0.0, 0.01, 0.0, 0.01, 0.5, 0.2 },
-        .z = { 0.01, 0.0, 0.0, 0.01, 0.0, 0.01, 0.5, 0.2 },
-        .yaw = { 0.01, 0.0, 0.0, 0.01, 0.0, 0.01, 0.5, 0.2 }
+        .x = { 0.05, 0.0, 0.0, 0.02, 0.01, 0.01, 0.5, 0.2, 20.0, 15.0 },
+        .y = { 0.05, 0.0, 0.0, 0.02, 0.01, 0.01, 0.5, 0.2, 20.0, 15.0 },
+        .z = { 0.08, 0.0, 0.0, 0.04, 0.02, 0.01, 0.5, 0.2, 20.0, 15.0 },
+        .yaw = { 0.1, 0.0, 0.0, 0.05, 0.02, 0.01, 0.5, 0.2, 2.0, 1.5 }
     },
     .ins = { 45.7749, 126.6765 },
     .soft_watchdog = { 3000, true, false, false },
     .sensors = { ZDataSource::USE_MS5837_Z },
-    .simulation = { false, 20.0, 15.0, 300.0 }
+    .simulation = { true, 20.0, 15.0, 1000.0 }
 };
 
 const ParamMeta SYSTEM_PARAMS[] = {
@@ -30,6 +30,8 @@ const ParamMeta SYSTEM_PARAMS[] = {
     {"chassis.x.vel_kd", &sys_config.chassis.x.vel_kd, ParamType::FLOAT},
     {"chassis.x.max_v", &sys_config.chassis.x.max_v, ParamType::FLOAT},
     {"chassis.x.max_a", &sys_config.chassis.x.max_a, ParamType::FLOAT},
+    {"chassis.x.mass", &sys_config.chassis.x.mass, ParamType::FLOAT},
+    {"chassis.x.drag", &sys_config.chassis.x.drag, ParamType::FLOAT},
     {"chassis.y.pos_kp", &sys_config.chassis.y.pos_kp, ParamType::FLOAT},
     {"chassis.y.pos_ki", &sys_config.chassis.y.pos_ki, ParamType::FLOAT},
     {"chassis.y.pos_kd", &sys_config.chassis.y.pos_kd, ParamType::FLOAT},
@@ -38,6 +40,8 @@ const ParamMeta SYSTEM_PARAMS[] = {
     {"chassis.y.vel_kd", &sys_config.chassis.y.vel_kd, ParamType::FLOAT},
     {"chassis.y.max_v", &sys_config.chassis.y.max_v, ParamType::FLOAT},
     {"chassis.y.max_a", &sys_config.chassis.y.max_a, ParamType::FLOAT},
+    {"chassis.y.mass", &sys_config.chassis.y.mass, ParamType::FLOAT},
+    {"chassis.y.drag", &sys_config.chassis.y.drag, ParamType::FLOAT},
     {"chassis.z.pos_kp", &sys_config.chassis.z.pos_kp, ParamType::FLOAT},
     {"chassis.z.pos_ki", &sys_config.chassis.z.pos_ki, ParamType::FLOAT},
     {"chassis.z.pos_kd", &sys_config.chassis.z.pos_kd, ParamType::FLOAT},
@@ -46,6 +50,8 @@ const ParamMeta SYSTEM_PARAMS[] = {
     {"chassis.z.vel_kd", &sys_config.chassis.z.vel_kd, ParamType::FLOAT},
     {"chassis.z.max_v", &sys_config.chassis.z.max_v, ParamType::FLOAT},
     {"chassis.z.max_a", &sys_config.chassis.z.max_a, ParamType::FLOAT},
+    {"chassis.z.mass", &sys_config.chassis.z.mass, ParamType::FLOAT},
+    {"chassis.z.drag", &sys_config.chassis.z.drag, ParamType::FLOAT},
     {"chassis.yaw.pos_kp", &sys_config.chassis.yaw.pos_kp, ParamType::FLOAT},
     {"chassis.yaw.pos_ki", &sys_config.chassis.yaw.pos_ki, ParamType::FLOAT},
     {"chassis.yaw.pos_kd", &sys_config.chassis.yaw.pos_kd, ParamType::FLOAT},
@@ -54,6 +60,8 @@ const ParamMeta SYSTEM_PARAMS[] = {
     {"chassis.yaw.vel_kd", &sys_config.chassis.yaw.vel_kd, ParamType::FLOAT},
     {"chassis.yaw.max_v", &sys_config.chassis.yaw.max_v, ParamType::FLOAT},
     {"chassis.yaw.max_a", &sys_config.chassis.yaw.max_a, ParamType::FLOAT},
+    {"chassis.yaw.mass", &sys_config.chassis.yaw.mass, ParamType::FLOAT},
+    {"chassis.yaw.drag", &sys_config.chassis.yaw.drag, ParamType::FLOAT},
     {"ins.init_lat", &sys_config.ins.init_lat, ParamType::FLOAT},
     {"ins.init_lon", &sys_config.ins.init_lon, ParamType::FLOAT},
     {"simulation.hitl_enabled", &sys_config.simulation.hitl_enabled, ParamType::BOOL},
@@ -63,7 +71,7 @@ const ParamMeta SYSTEM_PARAMS[] = {
     {NULL, NULL, ParamType::FLOAT}
 };
 
-const size_t SYSTEM_PARAMS_COUNT = 43;
+const size_t SYSTEM_PARAMS_COUNT = 51;
 
 } // namespace config
 } // namespace auv

@@ -78,6 +78,9 @@ void ControlTask::init() {
 
     ins_driver.init();
     SoftWatchdog::getInstance().init(auv::config::sys_config.soft_watchdog);
+    
+    // 初始化底盘 PID 参数与运动学约束 (从 SystemConfig 加载)
+    auv::control::chassis.applyConfig(auv::config::sys_config.chassis);
 
     // 简单测试：非阻塞地通过 UART5 发送一条调试信息（忙时丢弃）
     const char test_msg[] = "DEBUG: UART5 OK\r\n";
@@ -248,10 +251,19 @@ void ControlTask::computeAndPublish(const auv::common::NavState &nav) {
     // 如果满足仿真锁定状态，将计算出的推力喂回仿真引擎
     bool use_sim = is_system_armed ? g_sim_inited : auv::config::sys_config.simulation.hitl_enabled;
     if (use_sim && g_sim_inited) {
-        g_hitl_sim.step(forces, 
-                       auv::config::sys_config.simulation.mass, 
-                       auv::config::sys_config.simulation.drag, 
-                       auv::config::sys_config.simulation.thrust_k);
+        std::array<float, 4> masses = {
+            auv::config::sys_config.chassis.x.mass,
+            auv::config::sys_config.chassis.y.mass,
+            auv::config::sys_config.chassis.z.mass,
+            auv::config::sys_config.chassis.yaw.mass
+        };
+        std::array<float, 4> drags = {
+            auv::config::sys_config.chassis.x.drag,
+            auv::config::sys_config.chassis.y.drag,
+            auv::config::sys_config.chassis.z.drag,
+            auv::config::sys_config.chassis.yaw.drag
+        };
+        g_hitl_sim.step(forces, masses, drags, auv::config::sys_config.simulation.thrust_k);
     }
 
     taskENTER_CRITICAL();
