@@ -61,7 +61,7 @@
     "init_lon": 126.6765
   },
   "simulation": {
-    "hitl_enabled": true,
+    "hitl_enabled": false,
     "mass": 20.0,
     "drag": 15.0,
     "thrust_k": 1000.0
