@@ -29,7 +29,7 @@ public:
         
         // 1. 机体系加速度计算 (F_net = F_thrust - F_drag)
         for (int i = 0; i < 4; i++) {
-            float m = masses[i] > 0.01f ? masses[i] : 20.0f;
+            float m = (masses[i] > 0.00001f) ? masses[i] : 20.0f;
             float push = forces[i] * k;
             float resist = velocity_[i] * drags[i];
             float accel = (push - resist) / m;

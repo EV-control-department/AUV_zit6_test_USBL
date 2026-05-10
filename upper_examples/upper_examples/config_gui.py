@@ -190,8 +190,6 @@ class ConfigApp(QMainWindow):
                 row = self.params_map[path]
                 self.table.setItem(row, 1, QTableWidgetItem(str(val)))
                 self.table.item(row, 1).setFlags(Qt.ItemIsEnabled)
-                # 同时更新待编辑框，以便保存时基准一致
-                self.table.setItem(row, 2, QTableWidgetItem(str(val)))
 
     def on_apply(self):
         paths, values = [], []

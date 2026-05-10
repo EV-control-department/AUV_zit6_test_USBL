@@ -24,8 +24,8 @@ void ChassisManager::applyConfig(const auv::config::ChassisConfig &cfg) {
     pos_cfg.kp = axis_cfg.pos_kp;
     pos_cfg.ki = axis_cfg.pos_ki;
     pos_cfg.kd = axis_cfg.pos_kd;
-    pos_cfg.i_limit = 500.0f;      // 增加积分限幅
-    pos_cfg.output_limit = 500.0f; // 增加输出限幅
+    pos_cfg.i_limit = axis_cfg.pos_i_limit;
+    pos_cfg.output_limit = axis_cfg.pos_output_limit;
     pos_cfg.dt = 0.01f;            // 固定周期
     pos_pids_[i].setConfig(pos_cfg);
 
@@ -33,8 +33,8 @@ void ChassisManager::applyConfig(const auv::config::ChassisConfig &cfg) {
     vel_cfg.kp = axis_cfg.vel_kp;
     vel_cfg.ki = axis_cfg.vel_ki;
     vel_cfg.kd = axis_cfg.vel_kd;
-    vel_cfg.i_limit = 500.0f;
-    vel_cfg.output_limit = 500.0f;
+    vel_cfg.i_limit = axis_cfg.vel_i_limit;
+    vel_cfg.output_limit = axis_cfg.vel_output_limit;
     vel_cfg.dt = 0.01f;
     vel_pids_[i].setConfig(vel_cfg);
   }
@@ -178,7 +178,15 @@ std::array<float, 4> ChassisManager::update(const float actual_p[4],
   std::array<float, 4> v_target_world = {0};
   for (int i = 0; i < 4; i++) {
     if (level_ == auv::common::ControlLevel::POSITION) {
-      ProfileState d = profiles_[i].update(target_p[i], dt);
+      ProfileState d;
+      if (config_.planner_enabled) {
+        d = profiles_[i].update(target_p[i], dt);
+      } else {
+        d.p = target_p[i];
+        d.v = 0.0f;
+        d.a = 0.0f;
+      }
+      
       // 修正：位置环的导数项应使用世界系下的速度误差 (v_ref_world -
       // v_actual_world)
       float actual_v_world_val = (i < 2) ? actual_v_world_now[i] : actual_v[i];
@@ -198,7 +206,14 @@ std::array<float, 4> ChassisManager::update(const float actual_p[4],
         target_v_world = target_p[i];
       }
 
-      ProfileState d = profiles_[i].updateVelocity(target_v_world, dt);
+      ProfileState d;
+      if (config_.planner_enabled) {
+        d = profiles_[i].updateVelocity(target_v_world, dt);
+      } else {
+        d.p = 0.0f; // Velocity mode doesn't use d.p
+        d.v = target_v_world;
+        d.a = 0.0f;
+      }
       v_target_world[i] = d.v;
     } else {
       v_target_world[i] = 0.0f;
@@ -235,7 +250,7 @@ std::array<float, 4> ChassisManager::update(const float actual_p[4],
                    : (i == 1 ? config_.y : (i == 2 ? config_.z : config_.yaw));
 
       // 使用机体系下的目标速度与机体系下的真实速度进行闭环
-      float a_ref = profiles_[i].getState().a;
+      float a_ref = config_.planner_enabled ? profiles_[i].getState().a : 0.0f;
       float a_actual = 0.0f;
       if (last_update_tick_ != 0 && dt > 0.0f) {
         a_actual = (actual_v_body[i] - last_v_body_[i]) / dt;

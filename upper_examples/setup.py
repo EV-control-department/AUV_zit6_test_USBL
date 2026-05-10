@@ -27,6 +27,7 @@ setup(
             'pid_setter = upper_examples.pidset:main',
             'pid_getter = upper_examples.pidget:main',
             'config_gui = upper_examples.config_gui:main',
+            'xbox_control = upper_examples.xbox_control:main',
         ],
     },
 )

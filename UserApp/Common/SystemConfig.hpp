@@ -34,9 +34,13 @@ struct AxisConfig {
     float pos_kp;
     float pos_ki;
     float pos_kd;
+    float pos_i_limit;
+    float pos_output_limit;
     float vel_kp;
     float vel_ki;
     float vel_kd;
+    float vel_i_limit;
+    float vel_output_limit;
     float max_v;
     float max_a;
     float mass;
@@ -44,6 +48,7 @@ struct AxisConfig {
 };
 
 struct ChassisConfig {
+    bool planner_enabled;
     AxisConfig x;
     AxisConfig y;
     AxisConfig z;

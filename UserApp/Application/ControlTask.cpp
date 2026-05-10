@@ -251,19 +251,20 @@ void ControlTask::computeAndPublish(const auv::common::NavState &nav) {
     // 如果满足仿真锁定状态，将计算出的推力喂回仿真引擎
     bool use_sim = is_system_armed ? g_sim_inited : auv::config::sys_config.simulation.hitl_enabled;
     if (use_sim && g_sim_inited) {
+        float k = auv::config::sys_config.simulation.thrust_k;
         std::array<float, 4> masses = {
-            auv::config::sys_config.chassis.x.mass,
-            auv::config::sys_config.chassis.y.mass,
-            auv::config::sys_config.chassis.z.mass,
-            auv::config::sys_config.chassis.yaw.mass
+            auv::config::sys_config.chassis.x.mass * k,
+            auv::config::sys_config.chassis.y.mass * k,
+            auv::config::sys_config.chassis.z.mass * k,
+            auv::config::sys_config.chassis.yaw.mass * k
         };
         std::array<float, 4> drags = {
-            auv::config::sys_config.chassis.x.drag,
-            auv::config::sys_config.chassis.y.drag,
-            auv::config::sys_config.chassis.z.drag,
-            auv::config::sys_config.chassis.yaw.drag
+            auv::config::sys_config.chassis.x.drag * k,
+            auv::config::sys_config.chassis.y.drag * k,
+            auv::config::sys_config.chassis.z.drag * k,
+            auv::config::sys_config.chassis.yaw.drag * k
         };
-        g_hitl_sim.step(forces, masses, drags, auv::config::sys_config.simulation.thrust_k);
+        g_hitl_sim.step(forces, masses, drags, k);
     }
 
     taskENTER_CRITICAL();

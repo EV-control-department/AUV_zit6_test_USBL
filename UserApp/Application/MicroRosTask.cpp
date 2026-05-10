@@ -142,26 +142,38 @@ void MicroRosTask::onZitSetpoint(const void *msgin) {
         static auv::common::ControlLevel last_l = auv::common::ControlLevel::NONE;
         last_l = new_level;
 
+        // 预处理机体系分量：X/Y 必须作为矢量整体旋转
+        float dx_world = 0.0f, dy_world = 0.0f;
+        if (is_body) {
+            float bx = (mask & 1) ? 0.0f : val[0];
+            float by = (mask & 2) ? 0.0f : val[1];
+            auv::control::CoordinateManager::bodyToWorld(nav.yaw, bx, by, dx_world, dy_world);
+        }
+
         for (int i = 0; i < 4; i++) {
             if (!(mask & (1 << i))) {
                 if (is_inc) {
                     if (is_body && i < 2) {
-                        // 机体系位置增量：根据当前航向角旋转增量后，累加到世界系目标上
-                        float wx, wy;
-                        auv::control::CoordinateManager::bodyToWorld(nav.yaw, (i==0?val[0]:0.0f), (i==1?val[1]:0.0f), wx, wy);
-                        if (i == 0) target_p[0] += wx;
-                        if (i == 1) target_p[1] += wy;
+                        // 机体系位置增量：使用预计算好的世界系分量
+                        if (i == 0) target_p[0] += dx_world;
+                        if (i == 1) target_p[1] += dy_world;
                     } else {
                         // 世界系位置/深度/偏航增量：直接累加到当前目标上
                         target_p[i] += val[i];
                     }
                 } else {
                     // 非增量模式
-                    if (is_body && i < 2) {
-                        float wx, wy;
-                        auv::control::CoordinateManager::bodyToWorld(nav.yaw, val[0], val[1], wx, wy);
-                        target_p[0] = wx; target_p[1] = wy;
+                    if (is_body) {
+                        if (i < 2) {
+                            // 机体系绝对位置：相对于当前“实时位置”的偏移 (Snapshot Relative)
+                            if (i == 0) target_p[0] = nav.x + dx_world;
+                            if (i == 1) target_p[1] = nav.y + dy_world;
+                        } else {
+                            // Z 和 Yaw 同样相对于当前实时位置
+                            target_p[i] = (i == 2 ? nav.z : nav.yaw) + val[i];
+                        }
                     } else {
+                        // 世界系绝对位置
                         target_p[i] = val[i];
                     }
                 }
