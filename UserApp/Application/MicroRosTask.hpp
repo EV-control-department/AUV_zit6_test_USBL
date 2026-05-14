@@ -17,6 +17,7 @@
 #include <zit6_interfaces/msg/zit_status.h>
 #include <zit6_interfaces/msg/zit_pid.h>
 #include <zit6_interfaces/msg/zit_pid_status.h>
+#include <zit6_interfaces/msg/zit_usbl.h>
 #include <zit6_interfaces/srv/update_params.h>
 #include <zit6_interfaces/srv/get_params.h>
 #include "SystemConfig.hpp"
@@ -35,7 +36,7 @@ private:
 	rcl_node_t node_;
 	rclc_executor_t executor_;
 	rcl_subscription_t setpoint_sub_, arm_sub_, ins_cmd_sub_, pid_sub_, servo_sub_, led_sub_;
-	rcl_publisher_t pos_pub_, vel_pub_, thr_pub_, zithbt_pub_, status_pub_, pid_status_pub_;
+	rcl_publisher_t pos_pub_, vel_pub_, thr_pub_, zithbt_pub_, status_pub_, pid_status_pub_, usbl_pub_;
 
 	// 消息 + 缓冲区
 	std_msgs__msg__Float32 servo_msg_;
@@ -56,8 +57,11 @@ private:
 	zit6_interfaces__srv__GetParams_Response get_res_;
 
 	float pos_buf_[4], vel_buf_[4], thr_buf_[4];
+	zit6_interfaces__msg__ZitUsbl usbl_msg_;
 
 	// 处理函数（原来位于匿名命名空间）
+	void usblPublish();
+
 	void onZitPid(const void *msgin);
 	void onZitSetpoint(const void *msgin);
 	void onArmHeartbeat(const void *msgin);
@@ -75,6 +79,7 @@ private:
 	static void insCmdCb(const void *msgin) { if (instance_) instance_->onInsCommand(msgin); }
 	static void servoCb(const void *msgin) { if (instance_) instance_->onServoCmd(msgin); }
 	static void ledCb(const void *msgin) { if (instance_) instance_->onLedCmd(msgin); }
+	static void usblPubCb() { if (instance_) instance_->usblPublish(); }
 	static void updateParamsCb(const void *req, rmw_request_id_t *req_id, void *res) { if (instance_) instance_->onUpdateParams(req, req_id, res); }
 	static void getParamsCb(const void *req, rmw_request_id_t *req_id, void *res) { if (instance_) instance_->onGetParams(req, req_id, res); }
 };

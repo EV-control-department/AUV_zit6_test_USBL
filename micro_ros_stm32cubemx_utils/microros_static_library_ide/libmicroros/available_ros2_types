@@ -290,5 +290,6 @@ zit6_interfaces/UpdateParams.srv
 zit6_interfaces/GetParams.srv
 zit6_interfaces/ZitPid.msg
 zit6_interfaces/ZitSetpoint.msg
+zit6_interfaces/ZitUsbl.msg
 zit6_interfaces/ZitPidStatus.msg
 zit6_interfaces/ZitStatus.msg

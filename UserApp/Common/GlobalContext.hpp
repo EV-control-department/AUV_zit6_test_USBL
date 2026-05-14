@@ -3,6 +3,7 @@
 
 #include "CommonConfig.hpp"
 #include "INS_Driver.hpp"
+#include "USBL_Driver.hpp"
 #include "MotionController_Driver.hpp"
 #include "ChassisManager.hpp"
 #include "MS5837_Class.hpp"
@@ -15,18 +16,21 @@ extern UART_HandleTypeDef huart5;
 extern UART_HandleTypeDef huart3;
 extern UART_HandleTypeDef huart2;
 extern UART_HandleTypeDef huart6;
+extern UART_HandleTypeDef huart1;
 extern IWDG_HandleTypeDef hiwdg1;
 extern I2C_HandleTypeDef hi2c1;
 }
 
 // --- DMA 缓冲区 extern ---
 extern uint8_t ins_rx_buffer[512];
+extern uint8_t usbl_rx_buffer[256];
 extern auv::device::MotionController_Driver::ThrustPacket motor_tx_packet;
 
 // --- 全局驱动实例 ---
 namespace auv {
     namespace device {
         extern INS_Driver ins_driver;
+        extern USBL_Driver usbl_driver;
         extern MotionController_Driver motor_driver;
         extern MS5837 depth_sensor;
     }

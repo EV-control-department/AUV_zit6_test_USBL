@@ -4,6 +4,7 @@
 
 // --- DMA 缓冲区定义 (位于 RAM_D2) ---
 __attribute__((section(".dma_buffer"))) uint8_t ins_rx_buffer[512];
+__attribute__((section(".dma_buffer"))) uint8_t usbl_rx_buffer[256];
 __attribute__((section(".dma_buffer")))
 auv::device::MotionController_Driver::ThrustPacket motor_tx_packet;
 
@@ -13,6 +14,7 @@ namespace device {
 INS_Driver ins_driver(&huart7, &huart7, ins_rx_buffer, 512);
 MotionController_Driver motor_driver(&huart6, &motor_tx_packet);
 MS5837 depth_sensor(&hi2c1);
+USBL_Driver usbl_driver(&huart1);
 } // namespace device
 
 namespace control {

@@ -1,6 +1,7 @@
 #include "USBL_Driver.hpp"
 
 namespace auv {
+namespace device {
 
 namespace {
 static constexpr uint8_t kAcousticValidBit = 1u << 1;
@@ -126,4 +127,5 @@ void USBL_Driver::decodePacket(UsblState& s) {
     s = state_;
 }
 
+} // namespace device
 } // namespace auv

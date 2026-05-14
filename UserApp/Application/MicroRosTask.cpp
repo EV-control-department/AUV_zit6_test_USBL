@@ -20,6 +20,7 @@
 #include <zit6_interfaces/msg/zit_status.h>
 #include <zit6_interfaces/msg/zit_pid.h>
 #include <zit6_interfaces/msg/zit_pid_status.h>
+#include <zit6_interfaces/msg/zit_usbl.h>
 #include <zit6_interfaces/srv/update_params.h>
 #include <zit6_interfaces/srv/get_params.h>
 #include <rosidl_runtime_c/string_functions.h>
@@ -29,6 +30,7 @@
 #include <cstdio>
 #include "cJSON.h"
 #include "ConfigService.hpp"
+#include "USBL_Driver.hpp"
 
 extern "C" {
 bool cubemx_transport_open(struct uxrCustomTransport *transport);
@@ -265,6 +267,27 @@ void MicroRosTask::onGetParams(const void *reqin, rmw_request_id_t *req_id, void
     rosidl_runtime_c__String__assign(&res->message, "ok");
 }
 
+void MicroRosTask::usblPublish() {
+    // 更新 USBL 驱动数据（从串口读取并解析）
+    auv::device::UsblState usbl_state;
+    if (auv::device::usbl_driver.update(usbl_state)) {
+        // 填充消息
+        usbl_msg_.roll = usbl_state.roll;
+        usbl_msg_.pitch = usbl_state.pitch;
+        usbl_msg_.yaw = usbl_state.yaw;
+        usbl_msg_.beacon_north = usbl_state.beacon_north;
+        usbl_msg_.beacon_east = usbl_state.beacon_east;
+        usbl_msg_.beacon_depth = usbl_state.beacon_depth;
+        usbl_msg_.sensor_status = usbl_state.sensor_status;
+        usbl_msg_.nav_mode = usbl_state.nav_mode;
+        usbl_msg_.timestamp = usbl_state.timestamp;
+        memcpy(usbl_msg_.energy, usbl_state.energy, 8);
+
+        // 发布话题
+        rcl_publish(&usbl_pub_, &usbl_msg_, NULL);
+    }
+}
+
 void MicroRosTask::cleanupMicroRos() {
     rclc_executor_fini(&executor_);
     // free pre-allocated request/response buffers
@@ -294,6 +317,7 @@ void MicroRosTask::cleanupMicroRos() {
     rcl_publisher_fini(&thr_pub_, &node_);
     rcl_publisher_fini(&zithbt_pub_, &node_);
     rcl_publisher_fini(&status_pub_, &node_);
+    rcl_publisher_fini(&usbl_pub_, &node_);
     rcl_publisher_fini(&pid_status_pub_, &node_);
     rcl_subscription_fini(&setpoint_sub_, &node_);
     rcl_subscription_fini(&arm_sub_, &node_);
@@ -324,7 +348,7 @@ void MicroRosTask::run() {
     rcutils_set_default_allocator(&allocator);
     rcl_allocator_t rcl_allocator = rcl_get_default_allocator();
 
-    uint32_t last_hbt_pub_tick = 0, last_vel_pub_tick = 0, last_thr_pub_tick = 0, last_pos_pub_tick = 0, last_status_pub_tick = 0;
+    uint32_t last_hbt_pub_tick = 0, last_vel_pub_tick = 0, last_thr_pub_tick = 0, last_pos_pub_tick = 0, last_status_pub_tick = 0, last_usbl_pub_tick = 0;
     enum uros_state { WAITING_AGENT, AGENT_CONNECTED } state = WAITING_AGENT;
 
     for (;;) {
@@ -343,8 +367,10 @@ void MicroRosTask::run() {
                     std_msgs__msg__UInt8__init(&led_msg_);
                     std_msgs__msg__Float32__init(&servo_msg_);
                     zit6_interfaces__msg__ZitStatus__init(&status_msg_);
+                    zit6_interfaces__msg__ZitUsbl__init(&usbl_msg_);
 
                     rclc_publisher_init_default(&pos_pub_, &node_, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray), "/zit6/state/pos");
+                    rclc_publisher_init_default(&usbl_pub_, &node_, ROSIDL_GET_MSG_TYPE_SUPPORT(zit6_interfaces, msg, ZitUsbl), "/zit6/state/usbl");
                     rclc_publisher_init_default(&vel_pub_, &node_, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray), "/zit6/state/vel");
                     rclc_publisher_init_default(&thr_pub_, &node_, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32MultiArray), "/zit6/state/thr");
                     rclc_publisher_init_default(&zithbt_pub_, &node_, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, UInt32), "/zit6/state/zithbt");
@@ -434,6 +460,11 @@ void MicroRosTask::run() {
                     pos_buf_[2] = nav.z;
                     pos_buf_[3] = nav.yaw;
                     rcl_publish(&pos_pub_, &pos_fb_msg_, NULL);
+                }
+                // USBL data publish at 10Hz (100ms interval)
+                if (now_ms - last_usbl_pub_tick >= 100) {
+                    last_usbl_pub_tick = now_ms;
+                    usblPublish();
                 }
                 if (now_ms - last_status_pub_tick >= 100) {
                     last_status_pub_tick = now_ms; auv::common::NavState nav = auv::shared::snapshotNavState();

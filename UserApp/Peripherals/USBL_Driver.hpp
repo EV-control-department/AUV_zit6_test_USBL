@@ -19,6 +19,7 @@
 #include <string.h>
 
 namespace auv {
+namespace device {
 
 /**
  * @struct UsblState
@@ -68,7 +69,7 @@ public:
     UsblState getUsblState() const { return state_; }
 
 private:
-    SerialPort rx_port_;                               ///< 串口接收驱动
+    auv::porting::SerialPort rx_port_;                 ///< 串口接收驱动
 
     static constexpr uint16_t kMaxFrameSize = 256;     ///< 缓冲区最大尺寸
     static constexpr uint16_t kTargetFrameSize = 133;  ///< 已知 USBL 帧长为 133 字节
@@ -88,6 +89,7 @@ private:
     void decodePacket(UsblState& state);
 };
 
+} // namespace device
 } // namespace auv
 
 #endif // __USBL_DRIVER_HPP
